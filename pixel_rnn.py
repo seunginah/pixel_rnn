@@ -309,7 +309,7 @@ sample_fn = theano.function(
 )
 
 batch_size = 100
-data = get_CIFAR10_data()
+data = get_CIFAR10_data(mode = 1)
 y_train = data['y_train']
 X_train = data['X_train']
 small_X = X_train[:2]
