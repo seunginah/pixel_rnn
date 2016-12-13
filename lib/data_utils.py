@@ -3,70 +3,116 @@ import numpy as np
 import os
 from scipy.misc import imread
 
-def load_CIFAR_batch(filename):
+def load_CIFAR_batch(filename, mode):
   """ load single batch of cifar """
+  N = 10000
+  C = 3
+  H = 32
+  W = 32
+
   with open(filename, 'rb') as f:
     datadict = pickle.load(f)
     X = datadict['data']
     Y = datadict['labels']
-    X = X.reshape(10000, 3, 32, 32).transpose(0,2,3,1).astype("float")
-    Y = np.array(Y)
+    X = X.reshape(N, C, H, W).transpose(0,2,3,1).astype("float")
+    if mode == 0: # classification
+      Y = np.array(Y)
+    else: # image completion
+      Y = np.copy(X)
+
+      """
+      # Create a mask to remove a random square region from each image
+      mask = np.ones((N, 1, H, W))
+      missing_height = np.random.randint(1, H, N)
+      missing_width = np.random.randint(1, W, N)
+      missing_start_x = np.random.randint(0, 32 - missing_width + 1, N)
+      missing_start_y = np.random.randint(0, 32 - missing_width + 1, N)
+      missing_end_x = missing_start_x + missing_width
+      missing_end_y = missing_start_y + missing_height
+
+      for i in range(N):
+        mask[i][0][missing_start_x:missing_end_x, missing_start_y:missing_end_y] = 0
+      """
+
+      # Create a mask to remove the center square region from each image
+      mask = np.ones((1, H, W, 1))
+      missing_start = int(H * 0.25)  # 8
+      missing_end = int(H * 0.75)    # 24
+      mask[:, missing_start:missing_end, missing_start:missing_end, :] = 0
+      #mask = mask.transpose(0,2,3,1)
+      #print mask.shape, X.shape
+      #X = np.concatenate((X, mask), axis=-1)
+      X *= mask
+
+      # Make sure the center region of X has been zeroed out, but not of Y
+      assert np.all(X[:, missing_start:missing_end, missing_start:missing_end, :] == 0), \
+             'Not all center patch has been zeroed out'
+      assert np.any(Y[:, missing_start:missing_end, missing_start:missing_end, :] != 0), \
+             'Target center patch has been zeroed out'
+
     return X, Y
 
-def load_CIFAR10(ROOT):
+def load_CIFAR10(ROOT, mode):
   """ load all of cifar """
   xs = []
   ys = []
   for b in range(1,6):
     f = os.path.join(ROOT, 'data_batch_%d' % (b, ))
-    X, Y = load_CIFAR_batch(f)
+    X, Y = load_CIFAR_batch(f, mode)
     xs.append(X)
     ys.append(Y)
   Xtr = np.concatenate(xs)
   Ytr = np.concatenate(ys)
   del X, Y
-  Xte, Yte = load_CIFAR_batch(os.path.join(ROOT, 'test_batch'))
+  Xte, Yte = load_CIFAR_batch(os.path.join(ROOT, 'test_batch'), mode)
   return Xtr, Ytr, Xte, Yte
 
 
-def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000):
-    """
-    Load the CIFAR-10 dataset from disk and perform preprocessing to prepare
-    it for classifiers. These are the same steps as we used for the SVM, but
-    condensed to a single function.
-    """
-    # Load the raw CIFAR-10 data
-    cifar10_dir = 'datasets/cifar-10-batches-py'
-    X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir)
+def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000, mode=0):
+  """
+  Load the CIFAR-10 dataset from disk and perform preprocessing to prepare
+  it for classifiers. These are the same steps as we used for the SVM, but
+  condensed to a single function.
 
-    # Subsample the data
-    mask = range(num_training, num_training + num_validation)
-    X_val = X_train[mask]
-    y_val = y_train[mask]
-    mask = range(num_training)
-    X_train = X_train[mask]
-    y_train = y_train[mask]
-    mask = range(num_test)
-    X_test = X_test[mask]
-    y_test = y_test[mask]
+  mode = 0 for image classification, 1 for image completion
+  """
+  # Load the raw CIFAR-10 data
+  cifar10_dir = 'datasets/cifar-10-batches-py'
+  X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir, mode)
 
-    # Normalize the data: subtract the mean image
-    mean_image = np.mean(X_train, axis=0)
-    X_train -= mean_image
-    X_val -= mean_image
-    X_test -= mean_image
+  # Subsample the data
+  mask = range(num_training, num_training + num_validation)
+  X_val = X_train[mask]
+  y_val = y_train[mask]
+  mask = range(num_training)
+  X_train = X_train[mask]
+  y_train = y_train[mask]
+  mask = range(num_test)
+  X_test = X_test[mask]
+  y_test = y_test[mask]
 
-    # Transpose so that channels come first
-    X_train = X_train.transpose(0, 3, 1, 2).copy()
-    X_val = X_val.transpose(0, 3, 1, 2).copy()
-    X_test = X_test.transpose(0, 3, 1, 2).copy()
+  # Normalize the data: subtract the mean image
+  #mean_image = np.mean(X_train, axis=0)
+  #X_train -= mean_image
+  #X_val -= mean_image
+  #X_test -= mean_image
 
-    # Package data into a dictionary
-    return {
-      'X_train': X_train, 'y_train': y_train,
-      'X_val': X_val, 'y_val': y_val,
-      'X_test': X_test, 'y_test': y_test,
-    }
+  # Transpose so that channels come first
+  #X_train = X_train.transpose(0, 3, 1, 2).copy()
+  #X_val = X_val.transpose(0, 3, 1, 2).copy()
+  #X_test = X_test.transpose(0, 3, 1, 2).copy()
+
+  #if mode == 1:
+  #  y_train = y_train.transpose(0, 3, 1, 2).copy()
+  #  y_val = y_val.transpose(0, 3, 1, 2).copy()
+  #  y_test = y_test.transpose(0, 3, 1, 2).copy()
+
+  # Package data into a dictionary
+  return {
+    'X_train': X_train, 'y_train': y_train,
+    'X_val': X_val, 'y_val': y_val,
+    'X_test': X_test, 'y_test': y_test,
+  }
 
 
 def load_tiny_imagenet(path, dtype=np.float32):

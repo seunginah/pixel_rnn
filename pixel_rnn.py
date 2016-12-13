@@ -253,6 +253,8 @@ def DiagonalBiLSTM(name, input_dim, inputs):
 
     return forward + backward
 
+print 'Compiling network'
+
 # inputs.shape: (batch size, height, width, channels)
 inputs = T.tensor4('inputs')
 
@@ -309,6 +311,7 @@ grads = [T.clip(g, lib.floatX(-GRAD_CLIP), lib.floatX(GRAD_CLIP)) for g in grads
 
 updates = lasagne.updates.adam(grads, params, learning_rate=1e-3)
 
+print 'Compiling functions'
 train_fn = theano.function(
     [inputs],
     cost,
@@ -328,8 +331,12 @@ sample_fn = theano.function(
     on_unused_input='warn'
 )
 
+print 'Loading data'
 #train_data, dev_data, test_data = lib.mnist.load(BATCH_SIZE, TEST_BATCH_SIZE)
 data = get_CIFAR10_data(mode=1)
+for k, v in data.iteritems():
+    print '%s: ' % k, v.shape
+
 y_train = data['y_train']
 X_train = data['X_train']
 small_X = X_train[:2]
