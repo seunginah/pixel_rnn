@@ -32,26 +32,20 @@ from lib.data_utils import get_CIFAR10_data
 
 MODEL = 'pixel_rnn' # either pixel_rnn or pixel_cnn
 
+# Dataset
+HEIGHT = 32
+WIDTH = 32
+N_CHANNELS = 3
+N_LABELS = 256
+
 # Hyperparams
 BATCH_SIZE = 100
 DIM = 64 # Model dimensionality.
 GRAD_CLIP = 1 # Elementwise grad clip threshold
 
-# Dataset
-N_CHANNELS = 3
-N_LABELS = 256
-WIDTH = 32
-HEIGHT = 32
-
 # Other constants
-TEST_BATCH_SIZE = 100 # batch size to use when evaluating on dev/test sets. This should be the max that can fit into GPU memory.
-EVAL_DEV_COST = False # whether to evaluate dev cost during training
 GEN_SAMPLES = True # whether to generate samples during training (generating samples takes WIDTH*HEIGHT*N_CHANNELS full passes through the net)
-TRAIN_MODE = 'iters' # 'iters' to use PRINT_ITERS and STOP_ITERS, 'time' to use PRINT_TIME and STOP_TIME
-PRINT_ITERS = 5000 # Print cost, generate samples, save model checkpoint every N iterations.
-STOP_ITERS = 100000 # Stop after this many iterations
-PRINT_TIME = 60*60 # Print cost, generate samples, save model checkpoint every N seconds.
-STOP_TIME = 60*60*2 # Stop after this many seconds of actual training (not including time req'd to generate samples etc.)
+N_EPOCHS = 50
 
 lib.utils.print_model_settings(locals().copy())
 
@@ -253,6 +247,47 @@ def DiagonalBiLSTM(name, input_dim, inputs):
 
     return forward + backward
 
+def binarize(images):
+    """
+    Stochastically binarize values in [0, 1] by treating them as p-values of
+    a Bernoulli distribution.
+    """
+    return (numpy.random.uniform(size=images.shape) < images).astype('float32')
+
+def generate_and_save_samples(X, y, tag):
+
+    def save_images(images, filename):
+        """
+        images.shape: (batch, height, width, channels)
+        """
+        images = images.reshape((10,10,28,28))
+        # rowx, rowy, height, width -> rowy, height, rowx, width
+        images = images.transpose(1,2,0,3)
+        images = images.reshape((10*28, 10*28))
+
+        scipy.misc.toimage(images, cmin=0.0, cmax=1.0).save('{}_{}.jpg'.format(filename, tag))
+
+    samples = X
+    missing_start = int(HEIGHT * 0.25)  # 8
+    missing_end = int(HEIGHT * 0.75)    # 24
+
+    for i in xrange(missing_start, missing_end):
+        for j in xrange(missing_start, missing_end):
+            for k in xrange(N_CHANNELS):
+                next_sample = sample_fn(samples)
+                samples[:, i, j, k] = next_sample[:, i, j, k]
+
+    save_images(samples, 'samples')
+
+def make_minibatch(X_train, y_train, batch_size):
+    # Make a minibatch of training data
+    num_train = X_train.shape[0]
+    batch_mask = numpy.random.choice(num_train, batch_size)
+    X_batch = X_train[batch_mask]
+    y_batch = y_train[batch_mask]
+
+    return X_batch, y_batch
+
 print 'Compiling network'
 
 # inputs.shape: (batch size, height, width, channels)
@@ -289,7 +324,7 @@ if N_CHANNELS > 1:
     cost = T.mean(T.nnet.categorical_crossentropy(output, inputs.flatten().astype('int64')))
     
     # Prediction
-    prediction = T.argmax(output, axis=1).reshape((BATCH_SIZE, HEIGHT, WIDTH, 3))    
+    prediction = T.argmax(output, axis=1).reshape((-1, HEIGHT, WIDTH, 3))    
 
 else:
     # Sigmoid layer
@@ -332,7 +367,6 @@ sample_fn = theano.function(
 )
 
 print 'Loading data'
-#train_data, dev_data, test_data = lib.mnist.load(BATCH_SIZE, TEST_BATCH_SIZE)
 data = get_CIFAR10_data(mode=1)
 for k, v in data.iteritems():
     print '%s: ' % k, v.shape
@@ -341,111 +375,36 @@ y_train = data['y_train']
 X_train = data['X_train']
 small_X = X_train[:2]
 small_y = y_train[:2]
-
-def binarize(images):
-    """
-    Stochastically binarize values in [0, 1] by treating them as p-values of
-    a Bernoulli distribution.
-    """
-    return (numpy.random.uniform(size=images.shape) < images).astype('float32')
-
-def generate_and_save_samples(X, y, tag):
-
-    def save_images(images, filename):
-        """
-        images.shape: (batch, height, width, channels)
-        """
-        images = images.reshape((10,10,28,28))
-        # rowx, rowy, height, width -> rowy, height, rowx, width
-        images = images.transpose(1,2,0,3)
-        images = images.reshape((10*28, 10*28))
-
-        scipy.misc.toimage(images, cmin=0.0, cmax=1.0).save('{}_{}.jpg'.format(filename, tag))
-
-    samples = X
-    missing_start = int(HEIGHT * 0.25)  # 8
-    missing_end = int(HEIGHT * 0.75)    # 24
-
-    for i in xrange(missing_start, missing_end):
-        for j in xrange(missing_start, missing_end):
-            for k in xrange(N_CHANNELS):
-                next_sample = sample_fn(samples)
-                samples[:, i, j, k] = next_sample[:, i, j, k]
-
-    save_images(samples, 'samples')
-
-def make_minibatch(X_train, y_train, batch_size):
-    # Make a minibatch of training data
-    num_train = X_train.shape[0]
-    batch_mask = numpy.random.choice(num_train, batch_size)
-    X_batch = X_train[batch_mask]
-    y_batch = y_train[batch_mask]
-
-    return X_batch, y_batch
+num_train = X_train.shape[0]
 
 print "Training!"
 total_iters = 0
 total_time = 0.
 last_print_time = 0.
 last_print_iters = 0
-for epoch in itertools.count():
-
-    costs = []
-    #data_feeder = train_data()
-
-    num_train = X_train.shape[0]
+for epoch in xrange(N_EPOCHS):
+    
     for itr in xrange(num_train / BATCH_SIZE):
     #for itr in zip(make_minibatch(X_train, y_train, 100)):
         _, images = make_minibatch(X_train, y_train, BATCH_SIZE)
         #images = binarize(images.reshape((BATCH_SIZE, HEIGHT, WIDTH, 1)))
 
         start_time = time.time()
-        cost = train_fn(images)
+        new_cost = train_fn(images)
         total_time += time.time() - start_time
         total_iters += 1
 
-        costs.append(cost)
-
-        if (TRAIN_MODE=='iters' and total_iters-last_print_iters == PRINT_ITERS) or \
-            (TRAIN_MODE=='time' and total_time-last_print_time >= PRINT_TIME):
-
-            dev_costs = []
-            if EVAL_DEV_COST:
-                for images, targets in dev_data():
-                    images = images.reshape((-1, HEIGHT, WIDTH, 1))
-                    binarized = binarize(images)
-                    dev_cost = eval_fn(binarized)
-                    dev_costs.append(dev_cost)
-            else:
-                dev_costs.append(0.)
-
-            print "epoch:{}\ttotal iters:{}\ttrain cost:{}\tdev cost:{}\ttotal time:{}\ttime per iter:{}".format(
+        if itr % 10 == 0:
+            # Print training progress at the end of every epoch
+            print "epoch:{}\ttotal iters:{}\ttrain cost:{}\ttotal time:{}\ttime per iter:{}".format(
                 epoch,
                 total_iters,
-                numpy.mean(costs),
-                numpy.mean(dev_costs),
+                new_cost,
                 total_time,
                 total_time / total_iters
             )
-
-            tag = "iters{}_time{}".format(total_iters, total_time)
+        
+            tag = "itr{}".format(epoch)
             if GEN_SAMPLES:
                 generate_and_save_samples(small_X, small_y, tag)
             lib.save_params('params_{}.pkl'.format(tag))
-
-            costs = []
-            last_print_time += PRINT_TIME
-            last_print_iters += PRINT_ITERS
-
-        if (TRAIN_MODE=='iters' and total_iters == STOP_ITERS) or \
-            (TRAIN_MODE=='time' and total_time >= STOP_TIME):
-
-            print "Done!"
-
-            try: # This only matters on Ishaan's computer
-                import experiment_tools
-                experiment_tools.send_sms("done!")
-            except ImportError:
-                pass
-
-            sys.exit()
