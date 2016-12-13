@@ -36,7 +36,7 @@ DIM = 64 # Model dimensionality.
 GRAD_CLIP = 1 # Elementwise grad clip threshold
 
 # Dataset
-N_CHANNELS = 1
+N_CHANNELS = 3
 WIDTH = 32
 HEIGHT = 32
 
@@ -368,7 +368,7 @@ for epoch in itertools.count():
     for itr in xrange(num_train / batch_size):
         images, targets = make_minibatch(X_train, y_train, batch_size)
         print 'images size: ', str(images.shape)
-        images_reshaped = images.reshape((BATCH_SIZE, HEIGHT, WIDTH, 1))
+        images_reshaped = images.reshape((BATCH_SIZE, HEIGHT, WIDTH, N_CHANNELS))
         print 'images reshaped: ', str(images_reshaped.shape)
         images = binarize(images_reshaped)
 
