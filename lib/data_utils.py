@@ -63,20 +63,20 @@ def load_CIFAR10(ROOT, mode):
 
 def flatten_color_channels(x):
   """turn a 3 channel color image into a grayscale"""
-    r = x[:, :, :, 0]
-    g = x[:, :, :, 1]
-    b = x[:, :, :, 2]
+  r = x[:, :, :, 0]
+  g = x[:, :, :, 1]
+  b = x[:, :, :, 2]
 
-    n = x.shape[0]
-    h = x.shape[1]
-    w = x.shape[2]
+  n = x.shape[0]
+  h = x.shape[1]
+  w = x.shape[2]
 
-    # instead of using an average of pixels, use a weighted average
-    # consistent w human color perception
-    grayscale = np.multiply(0.21, r) + np.multiply(0.72, g) + np.multiply(0.07, b)
-    new = np.zeros([n, h, w, 1])
-    new[:, :, :, 0] = grayscale[:,:,:]
-    return new
+  # instead of using an average of pixels, use a weighted average
+  # consistent w human color perception
+  grayscale = np.multiply(0.21, r) + np.multiply(0.72, g) + np.multiply(0.07, b)
+  new = np.zeros([n, h, w, 1])
+  new[:, :, :, 0] = grayscale[:,:,:]
+  return new
 
 def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000, mode=0, color=True):
   """
