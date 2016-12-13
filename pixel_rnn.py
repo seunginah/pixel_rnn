@@ -36,7 +36,7 @@ DIM = 64 # Model dimensionality.
 GRAD_CLIP = 1 # Elementwise grad clip threshold
 
 # Dataset
-N_CHANNELS = 3
+N_CHANNELS = 1
 WIDTH = 32
 HEIGHT = 32
 
