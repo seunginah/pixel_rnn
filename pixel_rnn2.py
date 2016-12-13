@@ -276,10 +276,9 @@ output = Conv2D('OutputConv2', DIM, DIM, 1, output, mask_type='b', he_init=True)
 output = relu(output)
 
 # TODO: for color images, implement a 256-way softmax for each RGB channel here
-output = Conv2D('OutputConv3', DIM, 1, 1, output, mask_type='b')
-output = T.nnet.sigmoid(output)
-
-cost = T.mean(T.nnet.binary_crossentropy(output, inputs))
+output = Conv2D('OutputConv3', DIM, 3, 1, output, mask_type='b')
+output = T.nnet.relu(output)
+cost = T.mean(numpy.square(output - inputs))
 
 params = lib.search(cost, lambda x: hasattr(x, 'param'))
 lib.utils.print_params_info(params)
@@ -317,7 +316,7 @@ sample_fn = theano.function(
 )
 
 #train_data, dev_data, test_data = lib.mnist.load(BATCH_SIZE, TEST_BATCH_SIZE)
-data = get_CIFAR10_data(mode=1)
+data = get_CIFAR10_data()
 y_train = data['y_train']
 X_train = data['X_train']
 small_X = X_train[:2]
