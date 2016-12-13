@@ -51,6 +51,7 @@ PRINT_TIME = 60*60 # Print cost, generate samples, save model checkpoint every N
 STOP_TIME = 60*60*2 # Stop after this many seconds of actual training (not including time req'd to generate samples etc.)
 
 lib.utils.print_model_settings(locals().copy())
+from lib.data_utils import get_CIFAR10_data
 
 def relu(x):
     # Using T.nnet.relu gives me NaNs. No idea why.
