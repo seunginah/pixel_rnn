@@ -277,6 +277,7 @@ output = relu(output)
 output = Conv2D('OutputConv3', DIM, 1, 1, output, mask_type='b')
 output = T.nnet.sigmoid(output)
 
+#cost = T.mean(T.nnet.categorical_crossentropy(output, inputs))
 cost = T.mean(T.nnet.binary_crossentropy(output, inputs))
 
 params = lib.search(cost, lambda x: hasattr(x, 'param'))
@@ -306,7 +307,12 @@ sample_fn = theano.function(
     on_unused_input='warn'
 )
 
-train_data, dev_data, test_data = lib.mnist.load(BATCH_SIZE, TEST_BATCH_SIZE)
+batch_size = 100
+data = get_CIFAR10_data(mode=1)
+y_train = data['y_train']
+X_train = data['X_train']
+small_X = X_train[:2]
+small_y = y_train[:2]
 
 def binarize(images):
     """
@@ -338,7 +344,7 @@ def generate_and_save_samples(tag):
 
     save_images(samples, 'samples')
 
-print "Training!"
+print 'training on ', str(X_train.shape[0]), ' images \nbatch size: ', str(BATCH_SIZE) 
 total_iters = 0
 total_time = 0.
 last_print_time = 0.
@@ -347,11 +353,10 @@ for epoch in itertools.count():
     print 'epoch: ', str(epoch)
 
     costs = []
-    data_feeder = train_data()
-
-    for images, targets in data_feeder:
-
-        images = binarize(images.reshape((BATCH_SIZE, HEIGHT, WIDTH, 1)))
+    num_train = X_train.shape[0]
+    for itr in xrange(num_train / batch_size):
+        _, images = make_minibatch(X_train, y_train, batch_size)
+        #images = binarize(images.reshape((BATCH_SIZE, HEIGHT, WIDTH, 1)))
 
         start_time = time.time()
         cost = train_fn(images)
@@ -384,7 +389,7 @@ for epoch in itertools.count():
 
             tag = "iters{}_time{}".format(total_iters, total_time)
             if GEN_SAMPLES:
-                generate_and_save_samples(tag)
+                generate_and_save_samples(small_X, small_y, tag)
             lib.save_params('params_{}.pkl'.format(tag))
 
             costs = []
