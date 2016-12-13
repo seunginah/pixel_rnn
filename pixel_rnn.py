@@ -367,7 +367,10 @@ for epoch in itertools.count():
     num_train = X_train.shape[0]
     for itr in xrange(num_train / batch_size):
         _, images = make_minibatch(X_train, y_train, batch_size)
-        images = binarize(images.reshape((BATCH_SIZE, HEIGHT, WIDTH, 1)))
+        print 'images size: ', str(images.shape)
+        images_reshaped = images.reshape((BATCH_SIZE, HEIGHT, WIDTH, 1))
+        print 'images reshaped: ', str(images_reshaped.shape)
+        images = binarize(images_reshaped)
 
         start_time = time.time()
         cost = train_fn(images)
