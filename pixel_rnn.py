@@ -28,6 +28,8 @@ import time
 import functools
 import itertools
 
+from lib.data_utils import get_CIFAR10_data
+
 MODEL = 'pixel_rnn' # either pixel_rnn or pixel_cnn
 
 # Hyperparams
@@ -37,6 +39,7 @@ GRAD_CLIP = 1 # Elementwise grad clip threshold
 
 # Dataset
 N_CHANNELS = 3
+N_LABELS = 256
 WIDTH = 32
 HEIGHT = 32
 
@@ -273,12 +276,30 @@ output = relu(output)
 output = Conv2D('OutputConv2', DIM, DIM, 1, output, mask_type='b', he_init=True)
 output = relu(output)
 
-# TODO: for color images, implement a 256-way softmax for each RGB channel here
-output = Conv2D('OutputConv3', DIM, 1, 1, output, mask_type='b')
-output = T.nnet.sigmoid(output)
+if N_CHANNELS > 1:
+    # Softmax layer
+    output = Conv2D('OutputConv3', DIM, N_LABELS * N_CHANNELS, 1, output, mask_type='b')
+    output = output.reshape((-1, HEIGHT, WIDTH, N_LABELS, N_CHANNELS)) # (batch_size, 32, 32, 256, 3)
+    output = output.dimshuffle(0, 1, 2, 4, 3) # (batch_size, 32, 32, 3, 256)
+    output = T.nnet.softmax(output.reshape((-1, N_LABELS))) # (batch_size * 32 * 32 * 3, 256)
+    
+    # Loss
+    cost = T.mean(T.nnet.categorical_crossentropy(output, inputs.flatten().astype('int64')))
+    
+    # Prediction
+    prediction = T.argmax(output, axis=1).reshape((BATCH_SIZE, HEIGHT, WIDTH, 3))    
 
-#cost = T.mean(T.nnet.categorical_crossentropy(output, inputs))
-cost = T.mean(T.nnet.binary_crossentropy(output, inputs))
+else:
+    # Sigmoid layer
+    output = Conv2D('OutputConv3', DIM, 1, 1, output, mask_type='b')
+    output = T.nnet.sigmoid(output)
+
+    # Loss
+    cost = T.mean(T.nnet.binary_crossentropy(output, inputs))
+
+    # Prediction
+    prediction = binarize(output)
+
 
 params = lib.search(cost, lambda x: hasattr(x, 'param'))
 lib.utils.print_params_info(params)
@@ -303,12 +324,12 @@ eval_fn = theano.function(
 
 sample_fn = theano.function(
     [inputs],
-    output,
+    prediction,
     on_unused_input='warn'
 )
 
-batch_size = 100
-data = get_CIFAR10_data()
+#train_data, dev_data, test_data = lib.mnist.load(BATCH_SIZE, TEST_BATCH_SIZE)
+data = get_CIFAR10_data(mode=1)
 y_train = data['y_train']
 X_train = data['X_train']
 small_X = X_train[:2]
@@ -321,7 +342,7 @@ def binarize(images):
     """
     return (numpy.random.uniform(size=images.shape) < images).astype('float32')
 
-def generate_and_save_samples(tag):
+def generate_and_save_samples(X, y, tag):
 
     def save_images(images, filename):
         """
@@ -334,28 +355,41 @@ def generate_and_save_samples(tag):
 
         scipy.misc.toimage(images, cmin=0.0, cmax=1.0).save('{}_{}.jpg'.format(filename, tag))
 
-    samples = numpy.zeros((100, HEIGHT, WIDTH, 1), dtype='float32')
+    samples = X
+    missing_start = int(HEIGHT * 0.25)  # 8
+    missing_end = int(HEIGHT * 0.75)    # 24
 
-    for i in xrange(HEIGHT):
-        for j in xrange(WIDTH):
+    for i in xrange(missing_start, missing_end):
+        for j in xrange(missing_start, missing_end):
             for k in xrange(N_CHANNELS):
-                next_sample = binarize(sample_fn(samples))
+                next_sample = sample_fn(samples)
                 samples[:, i, j, k] = next_sample[:, i, j, k]
 
     save_images(samples, 'samples')
 
-print 'training on ', str(X_train.shape[0]), ' images \nbatch size: ', str(BATCH_SIZE) 
+def make_minibatch(X_train, y_train, batch_size):
+    # Make a minibatch of training data
+    num_train = X_train.shape[0]
+    batch_mask = numpy.random.choice(num_train, batch_size)
+    X_batch = X_train[batch_mask]
+    y_batch = y_train[batch_mask]
+
+    return X_batch, y_batch
+
+print "Training!"
 total_iters = 0
 total_time = 0.
 last_print_time = 0.
 last_print_iters = 0
 for epoch in itertools.count():
-    print 'epoch: ', str(epoch)
 
     costs = []
+    #data_feeder = train_data()
+
     num_train = X_train.shape[0]
-    for itr in xrange(num_train / batch_size):
-        _, images = make_minibatch(X_train, y_train, batch_size)
+    for itr in xrange(num_train / BATCH_SIZE):
+    #for itr in zip(make_minibatch(X_train, y_train, 100)):
+        _, images = make_minibatch(X_train, y_train, BATCH_SIZE)
         #images = binarize(images.reshape((BATCH_SIZE, HEIGHT, WIDTH, 1)))
 
         start_time = time.time()
