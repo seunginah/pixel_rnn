@@ -36,7 +36,7 @@ DIM = 64 # Model dimensionality.
 GRAD_CLIP = 1 # Elementwise grad clip threshold
 
 # Dataset
-N_CHANNELS = 3
+N_CHANNELS = 1
 WIDTH = 32
 HEIGHT = 32
 
@@ -309,7 +309,7 @@ sample_fn = theano.function(
 )
 
 batch_size = 100
-data = get_CIFAR10_data(mode = 1)
+data = get_CIFAR10_data(mode = 1, color=False)
 y_train = data['y_train']
 X_train = data['X_train']
 small_X = X_train[:2]

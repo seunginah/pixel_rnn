@@ -61,7 +61,24 @@ def load_CIFAR10(ROOT, mode):
   return Xtr, Ytr, Xte, Yte
 
 
-def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000, mode=0):
+def flatten_color_channels(x):
+  """turn a 3 channel color image into a grayscale"""
+    r = x[:, :, :, 0]
+    g = x[:, :, :, 1]
+    b = x[:, :, :, 2]
+
+    n = x.shape[0]
+    h = x.shape[1]
+    w = x.shape[2]
+
+    # instead of using an average of pixels, use a weighted average
+    # consistent w human color perception
+    grayscale = np.multiply(0.21, r) + np.multiply(0.72, g) + np.multiply(0.07, b)
+    new = np.zeros([n, h, w, 1])
+    new[:, :, :, 0] = grayscale[:,:,:]
+    return new
+
+def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000, mode=0, color=True):
   """
   Load the CIFAR-10 dataset from disk and perform preprocessing to prepare
   it for classifiers. These are the same steps as we used for the SVM, but
@@ -72,6 +89,20 @@ def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000, mod
   # Load the raw CIFAR-10 data
   cifar10_dir = 'datasets/cifar-10-batches-py'
   X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir, mode)
+
+  print X_train.shape
+  print y_train.shape
+  print X_test.shape
+  print y_test.shape
+
+  print 'X:', str(X_train[1,1,1,:])
+
+  # if color is false, flatten 3 color channels into 1
+  if color is False:
+    X_train = flatten_color_channels(X_train)
+    y_train = flatten_color_channels(y_train)
+    X_test = flatten_color_channels(X_test)
+    y_test = flatten_color_channels(y_test)
 
   # Subsample the data
   mask = range(num_training, num_training + num_validation)
