@@ -36,13 +36,13 @@ DIM = 64 # Model dimensionality.
 GRAD_CLIP = 1 # Elementwise grad clip threshold
 
 # Dataset
-N_CHANNELS = 1
-WIDTH = 28
-HEIGHT = 28
+N_CHANNELS = 3
+WIDTH = 32
+HEIGHT = 32
 
 # Other constants
 TEST_BATCH_SIZE = 100 # batch size to use when evaluating on dev/test sets. This should be the max that can fit into GPU memory.
-EVAL_DEV_COST = True # whether to evaluate dev cost during training
+EVAL_DEV_COST = False # whether to evaluate dev cost during training
 GEN_SAMPLES = True # whether to generate samples during training (generating samples takes WIDTH*HEIGHT*N_CHANNELS full passes through the net)
 TRAIN_MODE = 'iters' # 'iters' to use PRINT_ITERS and STOP_ITERS, 'time' to use PRINT_TIME and STOP_TIME
 PRINT_ITERS = 5000 # Print cost, generate samples, save model checkpoint every N iterations.
@@ -344,6 +344,7 @@ total_time = 0.
 last_print_time = 0.
 last_print_iters = 0
 for epoch in itertools.count():
+    print 'epoch: ', str(epoch)
 
     costs = []
     data_feeder = train_data()
