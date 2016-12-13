@@ -348,8 +348,8 @@ def generate_and_save_samples(X, y, tag):
     missing_start = int(32 * 0.25)  # 8
     missing_end = int(32 * 0.75)    # 24
 
-    for i in xrange(missing_start:missing_end):
-        for j in xrange(missing_start:missing_end):
+    for i in xrange(missing_start - missing_end):
+        for j in xrange(missing_start - missing_end):
             for k in xrange(N_CHANNELS):
                 next_sample = sample_fn(samples)
                 samples[:, i, j, k] = next_sample[:, i, j, k]
