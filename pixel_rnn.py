@@ -345,6 +345,16 @@ def generate_and_save_samples(tag):
 
     save_images(samples, 'samples')
 
+
+def make_minibatch(X_train, y_train, batch_size):
+    # Make a minibatch of training data
+    num_train = X_train.shape[0]
+    batch_mask = numpy.random.choice(num_train, batch_size)
+    X_batch = X_train[batch_mask]
+    y_batch = y_train[batch_mask]
+
+    return X_batch, y_batch
+
 print 'training on ', str(X_train.shape[0]), ' images \nbatch size: ', str(BATCH_SIZE) 
 total_iters = 0
 total_time = 0.
