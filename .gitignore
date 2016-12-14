@@ -1,2 +1,15 @@
 .DS_Store
 *.pyc
+*.png
+datasets/*
+*.ppt
+*.pdf
+
+*.aux
+*.log
+*.run.xml
+*.synctex.gz
+*.txt
+*.bcf
+*.brf
+*.blg
