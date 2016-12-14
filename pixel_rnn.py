@@ -444,12 +444,11 @@ for itr in xrange(num_iters):
     if itr % 10 == 0:
         epoch = itr * BATCH_SIZE / num_train
         total_time = time.time() - start_time
-        print "epoch:{}\ttotal iters:{}\ttrain cost:{}\ttotal time:{}\ttime per batch:{}".format(
+        print "epoch:{}\ttotal iters:{}\ttrain cost:{}\ttotal time:{}".format(
             epoch,
             itr,
             new_cost,
-            total_time,
-            total_time / itr
+            total_time
         )
     
     # Test on small train data every 100 iters
