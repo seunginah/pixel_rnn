@@ -28,7 +28,7 @@ import time
 import functools
 import itertools
 
-MODEL = 'pixel_cnn' # either pixel_rnn or pixel_cnn
+MODEL = 'pixel_rnn' # either pixel_rnn or pixel_cnn
 
 # Hyperparams
 BATCH_SIZE = 100
@@ -45,7 +45,7 @@ TEST_BATCH_SIZE = 100 # batch size to use when evaluating on dev/test sets. This
 EVAL_DEV_COST = False # whether to evaluate dev cost during training
 GEN_SAMPLES = True # whether to generate samples during training (generating samples takes WIDTH*HEIGHT*N_CHANNELS full passes through the net)
 TRAIN_MODE = 'iters' # 'iters' to use PRINT_ITERS and STOP_ITERS, 'time' to use PRINT_TIME and STOP_TIME
-PRINT_ITERS = 200 # Print cost, generate samples, save model checkpoint every N iterations.
+PRINT_ITERS = 2 # Print cost, generate samples, save model checkpoint every N iterations.
 STOP_ITERS = 100000 # Stop after this many iterations
 PRINT_TIME = 60*60 # Print cost, generate samples, save model checkpoint every N seconds.
 STOP_TIME = 60*60*2 # Stop after this many seconds of actual training (not including time req'd to generate samples etc.)
@@ -328,6 +328,8 @@ def generate_and_save_samples(X, y, tag):
         """
         images.shape: (batch, height, width, channels)
         """
+        print images.shape
+        print images
         images = images.reshape((10,10,28,28))
         # rowx, rowy, height, width -> rowy, height, rowx, width
         images = images.transpose(1,2,0,3)
