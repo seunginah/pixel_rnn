@@ -41,7 +41,7 @@ WIDTH = 32
 HEIGHT = 32
 
 # Other constants
-TEST_BATCH_SIZE = 1000 # batch size to use when evaluating on dev/test sets. This should be the max that can fit into GPU memory.
+TEST_BATCH_SIZE = 100 # batch size to use when evaluating on dev/test sets. This should be the max that can fit into GPU memory.
 EVAL_DEV_COST = False # whether to evaluate dev cost during training
 GEN_SAMPLES = True # whether to generate samples during training (generating samples takes WIDTH*HEIGHT*N_CHANNELS full passes through the net)
 TRAIN_MODE = 'iters' # 'iters' to use PRINT_ITERS and STOP_ITERS, 'time' to use PRINT_TIME and STOP_TIME
