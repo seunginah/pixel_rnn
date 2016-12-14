@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from lib.data_utils import get_CIFAR10_data
 
 # Filter size
-N_HIDDEN = 128 #512
+N_HIDDEN = 512 #128
 
 # Optimization learning rate
 LEARNING_RATE = .01
@@ -155,12 +155,6 @@ def main(batch_size, seed, use_small_data, use_mse):
     print 'X_train.shape:', X_train.shape
     print 'y_train.shape:', y_train.shape
 
-    # Images to check training progress on
-    small_X = X_train[:2]
-    small_y = y_train[:2]
-    save_images(small_X, SAVE_DIR + 'train/missing')
-    save_images(small_y, SAVE_DIR + 'train/ori')
-
     # Define network
     print 'Compiling network'
     num_train, num_channels, H, W = X_train.shape
@@ -178,7 +172,7 @@ def main(batch_size, seed, use_small_data, use_mse):
         nonlinearity=lasagne.nonlinearities.rectify,
         W=lasagne.init.HeUniform())
 
-    print lasagne.layers.get_output_shape(l_conv1)
+    #print lasagne.layers.get_output_shape(l_conv1)
     l_pool1 = lasagne.layers.MaxPool2DLayer(l_conv1, pool_size=(2, 2))
 
     # Second hidden layer
@@ -186,10 +180,10 @@ def main(batch_size, seed, use_small_data, use_mse):
         l_pool1, num_filters=N_HIDDEN, filter_size=(5, 5),
         nonlinearity=lasagne.nonlinearities.rectify,
         W=lasagne.init.HeUniform())
-    print lasagne.layers.get_output_shape(l_conv2)
+    #print lasagne.layers.get_output_shape(l_conv2)
 
     l_pool2 = lasagne.layers.MaxPool2DLayer(l_conv2, pool_size=(2, 2))
-    print lasagne.layers.get_output_shape(l_pool2)
+    #print lasagne.layers.get_output_shape(l_pool2)
 
     # Matrix of target pixels (batch_size, out_dim)
     target_output = T.imatrix('target_output')
@@ -246,6 +240,12 @@ def main(batch_size, seed, use_small_data, use_mse):
         os.makedirs(train_path)
     except OSError as exception:
         pass
+
+    # Images to check training progress on
+    small_X = X_train[:2]
+    small_y = y_train[:2]
+    save_images(small_X, SAVE_DIR + 'train/missing')
+    save_images(small_y, SAVE_DIR + 'train/ori')
 
     try:
         num_iters = num_train * NUM_EPOCHS / batch_size

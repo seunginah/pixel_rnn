@@ -261,7 +261,7 @@ def binarize(images):
 def save_image(img, filename):
     # Make sure num_channels is the last axis
     if img.shape[-1] != 3:
-        img.transpose(0, 2, 3, 1)
+        img = img.transpose(1, 2, 0)
 
     plt.imshow(img.astype('uint8'))
     plt.gca().axis('off')
@@ -276,21 +276,15 @@ def save_images(X, save_path):
     
     # Make sure num_channels is the last axis
     if X.shape[-1] != 3:
-        X.transpose(0, 2, 3, 1)
-
-    num_images, H, W, num_channels = X.shape
-    if num_images > 3:
-        # Pick 3 images randomly
-        i = np.random.randint(0, num_images, 3)
-        X = X[i, :, :, :]
+        X = X.transpose(0, 2, 3, 1)
 
     print 'Saving images'
     for i, img in enumerate(X):
         filename = save_path + str(i)
         save_image(img, filename)
 
-def generate_and_save_samples(X, y, tag):
-    samples = X
+def generate_and_save_samples(X, y, save_path, mode='test'):
+    samples = np.copy(X)
     missing_start = int(HEIGHT * 0.25)  # 8
     missing_end = int(HEIGHT * 0.75)    # 24
 
@@ -300,7 +294,24 @@ def generate_and_save_samples(X, y, tag):
                 next_sample = sample_fn(samples)
                 samples[:, i, j, k] = next_sample[:, i, j, k]
 
-    save_images(samples, 'datasets/results/train/rnn_' + tag)
+    # Save
+    if X.shape[0] > 10:
+        # Pick 10 images randomly
+        i = np.random.randint(0, num_test, 10)
+        save_images(samples[i, :, :, :], save_path)
+        if mode == 'test':
+            save_images(X[i, :, :, :], save_path + '_missing')
+            save_images(y[i, :, :, :], save_path + '_ori')
+    else:
+        save_images(samples, save_path)
+        if mode == 'test':
+            save_images(X, save_path + 'missing')
+            save_images(y, save_path + 'ori')
+
+    # Compute RMSE
+    rmse = np.sqrt(np.mean(np.square(samples - y)))
+
+    return rmse
 
 def make_minibatch(X_train, y_train, batch_size):
     # Make a minibatch of training data
@@ -401,6 +412,8 @@ X_train = data['X_train']
 y_train = data['y_train']
 small_X = X_train[:2]
 small_y = y_train[:2]
+X_test = data['X_test'][:100]
+y_test = data['y_test'][:100]
 
 use_small_data = bool(int(sys.argv[1]))
 if use_small_data:
@@ -410,34 +423,46 @@ if use_small_data:
 
 num_train = X_train.shape[0]
 
+# Test on small train data while training to monitor progress
+# and save results here
+train_path = 'datasets/results/train/'
+try:
+    os.makedirs(train_path)
+except OSError as exception:
+    pass
+
 print "Training!"
-total_iters = 0
 total_time = 0.
-last_print_time = 0.
-last_print_iters = 0
-for epoch in xrange(N_EPOCHS):
+start_time = time.time()
+
+num_iters = num_train * N_EPOCHS / batch_size
+for itr in xrange(num_iters):
+    _, images = make_minibatch(X_train, y_train, BATCH_SIZE)
+    new_cost = train_fn(images)
+
+    # Print training progress every 10 iters    
+    if itr % 10 == 0:
+        epoch = itr * batch_size / num_train
+        total_time = time.time() - start_time
+        print "epoch:{}\ttotal iters:{}\ttrain cost:{}\ttotal time:{}\ttime per batch:{}".format(
+            epoch,
+            itr,
+            new_cost,
+            total_time,
+            total_time / itr
+        )
     
-    for itr in xrange(num_train / BATCH_SIZE):
-    #for itr in zip(make_minibatch(X_train, y_train, 100)):
-        _, images = make_minibatch(X_train, y_train, BATCH_SIZE)
-        #images = binarize(images.reshape((BATCH_SIZE, HEIGHT, WIDTH, 1)))
+    # Test on small train data every 100 iters
+    if itr % 100 == 0:
+        tag = train_path + "itr{}".format(itr)
+        if GEN_SAMPLES:
+            generate_and_save_samples(small_X, small_y, tag, mode='train')
+        lib.save_params('params_{}.pkl'.format(tag))
 
-        start_time = time.time()
-        new_cost = train_fn(images)
-        total_time += time.time() - start_time
-        total_iters += 1
-
-        if itr % 10 == 0:
-            # Print training progress at the end of every epoch
-            print "epoch:{}\ttotal iters:{}\ttrain cost:{}\ttotal time:{}\ttime per iter:{}".format(
-                epoch,
-                total_iters,
-                new_cost,
-                total_time,
-                total_time / total_iters
-            )
-        
-            tag = "itr{}".format(epoch)
-            if GEN_SAMPLES:
-                generate_and_save_samples(small_X, small_y, tag)
-            lib.save_params('params_{}.pkl'.format(tag))
+print 'Testing'
+test_path = 'datasets/results/test/'
+try:
+    os.makedirs(train_path)
+except OSError as exception:
+    pass
+rmse = generate_and_save_samples(X_test, y_test, test_path, mode='test')
