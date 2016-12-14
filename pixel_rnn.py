@@ -31,7 +31,7 @@ import itertools
 MODEL = 'pixel_rnn' # either pixel_rnn or pixel_cnn
 
 # Hyperparams
-BATCH_SIZE = 100
+BATCH_SIZE = 1000
 DIM = 64 # Model dimensionality.
 GRAD_CLIP = 1 # Elementwise grad clip threshold
 
@@ -41,7 +41,7 @@ WIDTH = 32
 HEIGHT = 32
 
 # Other constants
-TEST_BATCH_SIZE = 100 # batch size to use when evaluating on dev/test sets. This should be the max that can fit into GPU memory.
+TEST_BATCH_SIZE = 1000 # batch size to use when evaluating on dev/test sets. This should be the max that can fit into GPU memory.
 EVAL_DEV_COST = False # whether to evaluate dev cost during training
 GEN_SAMPLES = True # whether to generate samples during training (generating samples takes WIDTH*HEIGHT*N_CHANNELS full passes through the net)
 TRAIN_MODE = 'iters' # 'iters' to use PRINT_ITERS and STOP_ITERS, 'time' to use PRINT_TIME and STOP_TIME
@@ -308,7 +308,7 @@ sample_fn = theano.function(
     on_unused_input='warn'
 )
 
-batch_size = 100
+batch_size = BATCH_SIZE
 data = get_CIFAR10_data(mode = 1, color=False)
 y_train = data['y_train']
 X_train = data['X_train']
@@ -360,18 +360,18 @@ total_iters = 0
 total_time = 0.
 last_print_time = 0.
 last_print_iters = 0
+
+num_train = X_train.shape[0]
+
 for epoch in itertools.count():
     print 'epoch: ', str(epoch)
 
     costs = []
-    num_train = X_train.shape[0]
     for itr in xrange(num_train / batch_size):
         _, images = make_minibatch(X_train, y_train, batch_size)
-        print 'images size: ', str(images.shape)
+        print 'itr: ', str(itr)
         images_reshaped = images.reshape((BATCH_SIZE, HEIGHT, WIDTH, N_CHANNELS))
-        print 'images reshaped: ', str(images_reshaped.shape)
         images = binarize(images_reshaped)
-        print 'images binarized: ', str(images.shape)
 
         start_time = time.time()
         cost = train_fn(images)
