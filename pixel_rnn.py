@@ -482,6 +482,7 @@ try:
 except OSError as exception:
     pass
 rmse = generate_and_save_samples(X_test, y_test, test_path, mode='test')
+print 'rmse' +str(rmse)
 
 
 # for epoch in itertools.count():
