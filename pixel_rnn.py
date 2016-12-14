@@ -266,6 +266,32 @@ def binarize(images):
     """
     return (numpy.random.uniform(size=images.shape) < images).astype('float32')
 
+
+def save_image(img, filename):
+    # Make sure num_channels is the last axis
+    if img.shape[-1] != 3:
+        img = img.transpose(1, 2, 0)
+
+    plt.imshow(img.astype('uint8'))
+    plt.gca().axis('off')
+    plt.savefig(filename)
+
+def save_images(X, save_path):
+    """
+    Input:
+    - X: array of images of shape (num_images, num_channels, H, W)
+         or (num_images, H, W, num_channels)
+    """
+    
+    # Make sure num_channels is the last axis
+    if X.shape[-1] != 3:
+        X = X.transpose(0, 2, 3, 1)
+
+    print 'Saving images'
+    for i, img in enumerate(X):
+        filename = save_path + str(i)
+        save_image(img, filename)
+        
 def generate_and_save_samples(X, y, save_path, mode='test'):
     samples = numpy.copy(X)
     missing_start = int(HEIGHT * 0.25)  # 8
