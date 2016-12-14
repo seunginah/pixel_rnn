@@ -268,13 +268,12 @@ def binarize(images):
 
 
 def save_image(img, filename):
-    print img.shape
     # Make sure num_channels is the last axis
     if img.shape[-1] != N_CHANNELS:
         img = img.transpose(1, 0, 2)
 
     print img.shape
-    plt.imshow(img.astype('uint8'))
+    plt.imshow(img(:,:, 1).astype('uint8'))
     plt.gca().axis('off')
     plt.savefig(filename)
 
