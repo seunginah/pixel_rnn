@@ -265,6 +265,7 @@ def generate_and_save_samples(X, y, tag):
         images = images.transpose(1,2,0,3)
         images = images.reshape((10*28, 10*28))
 
+        print 'Saving images'
         scipy.misc.toimage(images, cmin=0.0, cmax=1.0).save('{}_{}.jpg'.format(filename, tag))
 
     samples = X
