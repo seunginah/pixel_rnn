@@ -272,7 +272,7 @@ def save_image(img, filename):
     print img[1]
     # Make sure num_channels is the last axis
     if img.shape[-1] != N_CHANNELS:
-        img = img.transpose(1, 2, 0)
+        img = img.transpose(1, 0, 2)
 
     print img.shape
     print img[1]
