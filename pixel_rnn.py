@@ -403,11 +403,17 @@ if USE_SMALL_DATA:
 
 num_train = X_train.shape[0]
 
-print 'training on ', str(X_train.shape[0]), ' images \nbatch size: ', str(BATCH_SIZE) 
-total_iters = 0
+# Test on small train data while training to monitor progress
+# and save results here
+train_path = 'datasets/results/train/'
+try:
+    os.makedirs(train_path)
+except OSError as exception:
+    pass
+
+print "Training", MODEL
 total_time = 0.
-last_print_time = 0.
-last_print_iters = 0
+start_time = time.time()
 
 num_train = X_train.shape[0]
 num_iters = num_train * N_EPOCHS / BATCH_SIZE
