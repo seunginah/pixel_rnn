@@ -435,14 +435,14 @@ print "Training!"
 total_time = 0.
 start_time = time.time()
 
-num_iters = num_train * N_EPOCHS / batch_size
+num_iters = num_train * N_EPOCHS / BATCH_SIZE
 for itr in xrange(num_iters):
     _, images = make_minibatch(X_train, y_train, BATCH_SIZE)
     new_cost = train_fn(images)
 
     # Print training progress every 10 iters    
     if itr % 10 == 0:
-        epoch = itr * batch_size / num_train
+        epoch = itr * BATCH_SIZE / num_train
         total_time = time.time() - start_time
         print "epoch:{}\ttotal iters:{}\ttrain cost:{}\ttotal time:{}\ttime per batch:{}".format(
             epoch,
