@@ -416,6 +416,7 @@ num_iters = num_train * N_EPOCHS / BATCH_SIZE
 try:
     for itr in xrange(num_iters):
         _, images = make_minibatch(X_train, y_train, BATCH_SIZE)
+        images = binarize(images.reshape((BATCH_SIZE, HEIGHT, WIDTH, N_CHANNELS)))
         new_cost = train_fn(images)
     
         # Print training progress every 10 iters    
