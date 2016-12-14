@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 
 from lib.data_utils import get_CIFAR10_data
 
-MODEL = 'pixel_rnn' # either pixel_rnn or pixel_cnn
+MODEL = sys.argv[2] # either pixel_rnn or pixel_cnn
 
 # Dataset
 HEIGHT = 32
@@ -322,8 +322,8 @@ def make_minibatch(X_train, y_train, batch_size):
 
     return X_batch, y_batch
 
-if len(sys.argv) < 2:
-    print 'Usage: python baseline.py use_small_data'
+if len(sys.argv) < 3:
+    print 'Usage: python baseline.py use_small_data model'
 
 print 'Compiling network'
 
@@ -456,7 +456,7 @@ for itr in xrange(num_iters):
         tag = train_path + "itr{}".format(itr)
         if GEN_SAMPLES:
             generate_and_save_samples(small_X, small_y, tag, mode='train')
-        lib.save_params('params_{}.pkl'.format(tag))
+        #lib.save_params('params_{}.pkl'.format(tag))
 
 print 'Testing'
 test_path = 'datasets/results/test/'
