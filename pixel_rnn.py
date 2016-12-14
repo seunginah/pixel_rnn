@@ -269,7 +269,7 @@ def binarize(images):
 
 def save_image(img, filename):
     # Make sure num_channels is the last axis
-    if img.shape[-1] != 3:
+    if img.shape[-1] != N_CHANNELS:
         img = img.transpose(1, 2, 0)
 
     plt.imshow(img.astype('uint8'))
@@ -291,7 +291,7 @@ def save_images(X, save_path):
     for i, img in enumerate(X):
         filename = save_path + str(i)
         save_image(img, filename)
-        
+
 def generate_and_save_samples(X, y, save_path, mode='test'):
     samples = numpy.copy(X)
     missing_start = int(HEIGHT * 0.25)  # 8
