@@ -335,16 +335,16 @@ def generate_and_save_samples(X, y, tag):
 
         scipy.misc.toimage(images, cmin=0.0, cmax=1.0).save('{}_{}.jpg'.format(filename, tag))
 
-    #samples = numpy.zeros((100, HEIGHT, WIDTH, 1), dtype='float32')
     samples = X
-    missing_start = int(32 * 0.25)  # 8
-    missing_end = int(32 * 0.75)    # 24
+    missing_start = int(HEIGHT * 0.25)  # 8
+    missing_end = int(HEIGHT * 0.75)    # 24
 
-    for i in xrange(missing_start:missing_end):
-        for j in xrange(missing_start:missing_end):
+    for i in xrange(missing_start, missing_end):
+        for j in xrange(missing_start, missing_end):
             for k in xrange(N_CHANNELS):
                 next_sample = sample_fn(samples)
                 samples[:, i, j, k] = next_sample[:, i, j, k]
+
     save_images(samples, MODEL +'samples')
 
 
