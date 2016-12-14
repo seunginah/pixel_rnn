@@ -3,6 +3,9 @@ import numpy as np
 import theano
 import theano.tensor as T
 import lasagne
+
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from lib.data_utils import get_CIFAR10_data
@@ -242,7 +245,7 @@ def main(batch_size, seed, use_small_data, use_mse):
             if itr % 100 == 0:
                 # Test current network on very small training data
                 print 'Testing current network on very small training data'
-                rmse = test(small_X, small_y, predict, SAVE_DIR + 'train/', 'itr' + str(itr))
+                rmse = test(np.copy(small_X), np.copy(small_y), predict, SAVE_DIR + 'train/', 'itr' + str(itr))
                 
                 # Print training progress (loss)
                 print 'Epoch {} loss = {} rmse = {}'. \
