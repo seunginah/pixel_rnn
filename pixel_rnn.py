@@ -34,6 +34,10 @@ import matplotlib.pyplot as plt
 
 from lib.data_utils import get_CIFAR10_data
 
+if len(sys.argv) < 3 or sys.argv[2] not in {'pixel_rnn', 'pixel_cnn'}:
+    print 'Usage: python baseline.py use_small_data model'
+
+USE_SMALL_DATA = bool(int(sys.argv[1]))
 MODEL = sys.argv[2] # either pixel_rnn or pixel_cnn
 
 # Dataset
@@ -322,9 +326,6 @@ def make_minibatch(X_train, y_train, batch_size):
 
     return X_batch, y_batch
 
-if len(sys.argv) < 3:
-    print 'Usage: python baseline.py use_small_data model'
-
 print 'Compiling network'
 
 # inputs.shape: (batch size, height, width, channels)
@@ -415,8 +416,7 @@ small_y = y_train[:2]
 X_test = data['X_test'][:100]
 y_test = data['y_test'][:100]
 
-use_small_data = bool(int(sys.argv[1]))
-if use_small_data:
+if USE_SMALL_DATA:
     X_train = X_train[:100]
     y_train = y_train[:100]
     print 'Using small data'
