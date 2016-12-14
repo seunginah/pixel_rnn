@@ -28,7 +28,7 @@ import time
 import functools
 import itertools
 
-MODEL = 'pixel_rnn' # either pixel_rnn or pixel_cnn
+MODEL = 'pixel_cnn' # either pixel_rnn or pixel_cnn
 
 # Hyperparams
 BATCH_SIZE = 100
@@ -36,7 +36,7 @@ DIM = 64 # Model dimensionality.
 GRAD_CLIP = 1 # Elementwise grad clip threshold
 
 # Dataset
-N_CHANNELS = 1
+N_CHANNELS = 3
 WIDTH = 32
 HEIGHT = 32
 
@@ -309,7 +309,7 @@ sample_fn = theano.function(
 )
 
 batch_size = BATCH_SIZE
-data = get_CIFAR10_data(mode = 1, color=False)
+data = get_CIFAR10_data(mode = 1)
 y_train = data['y_train']
 X_train = data['X_train']
 small_X = X_train[:2]
