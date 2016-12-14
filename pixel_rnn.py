@@ -272,8 +272,8 @@ def save_image(img, filename):
     if img.shape[-1] != N_CHANNELS:
         img = img.transpose(1, 0, 2)
 
-    print img.shape
-    plt.imshow(img[:,:, 1].astype('uint8'))
+    print img[:, :, 0].shape
+    plt.imshow(img[:, :, 0].astype('uint8'))
     plt.gca().axis('off')
     plt.savefig(filename)
 
