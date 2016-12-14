@@ -432,32 +432,36 @@ try:
 except OSError as exception:
     pass
 
-print "Training" + MODEL
+print "Training", MODEL
 total_time = 0.
 start_time = time.time()
 
 num_iters = num_train * N_EPOCHS / BATCH_SIZE
-for itr in xrange(num_iters):
-    _, images = make_minibatch(X_train, y_train, BATCH_SIZE)
-    new_cost = train_fn(images)
-
-    # Print training progress every 10 iters    
-    if itr % 10 == 0:
-        epoch = itr * BATCH_SIZE / num_train
-        total_time = time.time() - start_time
-        print "epoch:{}\ttotal iters:{}\ttrain cost:{}\ttotal time:{}".format(
-            epoch,
-            itr,
-            new_cost,
-            total_time
-        )
+try:
+    for itr in xrange(num_iters):
+        _, images = make_minibatch(X_train, y_train, BATCH_SIZE)
+        new_cost = train_fn(images)
     
-    # Test on small train data every 100 iters
-    if itr % 100 == 0:
-        tag = train_path + "itr{}".format(itr)
-        if GEN_SAMPLES:
-            generate_and_save_samples(small_X, small_y, tag, mode='train')
-        #lib.save_params('params_{}.pkl'.format(tag))
+        # Print training progress every 10 iters    
+        if itr % 10 == 0:
+            epoch = itr * BATCH_SIZE / num_train
+            total_time = time.time() - start_time
+            print "epoch:{}\ttotal iters:{}\ttrain cost:{}\ttotal time:{}".format(
+                epoch,
+                itr,
+                new_cost,
+                total_time
+            )
+        
+        # Test on small train data every 100 iters
+        if itr % 100 == 0:
+            tag = train_path + "itr{}".format(itr)
+            if GEN_SAMPLES:
+                generate_and_save_samples(small_X, small_y, tag, mode='train')
+            #lib.save_params('params_{}.pkl'.format(tag))
+
+except KeyboardInterrupt:
+    print '\nTraining stopped'
 
 print 'Testing'
 test_path = 'datasets/results/test/'

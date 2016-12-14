@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from lib.data_utils import get_CIFAR10_data
 
 # Filter size
-N_HIDDEN = 512 #128
+N_HIDDEN = 64 #128 512
 
 # Optimization learning rate
 LEARNING_RATE = .01
@@ -222,7 +222,7 @@ def main(batch_size, seed, use_small_data, use_mse):
         
     # Compute gradients
     params = lasagne.layers.get_all_params(l_out)
-    updates = lasagne.updates.rmsprop(loss, params, LEARNING_RATE)
+    updates = lasagne.updates.adam(loss, params, LEARNING_RATE)
 
     # Define Theano helper functions
     print 'Compiling functions'
@@ -267,7 +267,7 @@ def main(batch_size, seed, use_small_data, use_mse):
                       format(itr * batch_size / num_train, new_loss, rmse)
                     
     except KeyboardInterrupt:
-        pass
+        print '\nTraining stopped'
 
     # Test network
     print 'Testing'
