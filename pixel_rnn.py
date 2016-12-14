@@ -406,6 +406,7 @@ use_small_data = bool(int(sys.argv[1]))
 if use_small_data:
     X_train = X_train[:100]
     y_train = y_train[:100]
+    print 'Using small data'
 
 num_train = X_train.shape[0]
 
