@@ -35,7 +35,6 @@ import matplotlib.pyplot as plt
 from lib.data_utils import get_CIFAR10_data
 
 MODEL = sys.argv[2] # either pixel_rnn or pixel_cnn
-print MODEL
 
 # Dataset
 HEIGHT = 32
@@ -432,7 +431,7 @@ try:
 except OSError as exception:
     pass
 
-print "Training!"
+print "Training" + MODEL
 total_time = 0.
 start_time = time.time()
 
