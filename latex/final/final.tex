@@ -7,25 +7,18 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 % Include other packages here, before hyperref.
-%\usepackage{natbib}
-% If you comment hyperref and then uncomment it, you should delete
-% egpaper.aux before re-running latex.  (Or just hit 'q' on the first latex
-% run, let it finish, and you should be clear).
-\usepackage[pagebackref=true,breaklinks=true,letterpaper=true,colorlinks,bookmarks=false]{hyperref}
-\cvprfinalcopy % *** Uncomment this line for the final submission
+\usepackage{hyperref}
 
+\cvprfinalcopy % *** Uncomment this line for the final submission
 \def\cvprPaperID{****} % *** Enter the CVPR Paper ID here
 \def\httilde{\mbox{\tt\raisebox{-.5ex}{\symbol{126}}}}
-
 % Pages are numbered in submission mode, and unnumbered in camera-ready
-%\ifcvprfinal\pagestyle{empty}\fi
+\ifcvprfinal\pagestyle{empty}\fi
 
+% graphics pull from this folders
 \graphicspath{{../figs/}}
 
-
 \begin{document}
-
-%%%%%%%%% TITLE
 \title{Image Completion}
 
 \author{Debora Sujono, Yue Tang \& Grace Yoo \\ 
@@ -56,10 +49,15 @@ Our simplest model is a n layer CNN with regression between $X$ and $y$, using R
 
 \section{Related Work} 
 % This section discusses relevant literature for your project
-Training a generative model can easily become intractable; we not only have to simulate high dimensional distributions, but also apply some kind of inference method to create a new sample. 
+Training a generative model can easily become intractable; we not only have to simulate high dimensional distributions, but also apply some kind of inference method to create a new sample. We decided to stick with feed-forward networks, where at test time the input is the incomplete image, and the output is the completed image. The following sections detail previous implementations of RNNs and CNNs adapted for sequentially scanning pixels in images.
 
 \subsection{Pixel Recurrent Neural Networks}
-Pixel RNNs solve the problem of efficiently modeling the joint distribution of pixels in the image by treating it as a product of conditional distributions. This converts the problem into a sequence problem, and the task becomes to predict the next pixel given the previously generated ones \cite{pixelRNN}. 
+The recurrent layers of an RNN have memory-like properties, which is why networks using specialized types of recurrent layers are called Long-Short Term Memory (LSTM) nets. These variants on recurrent layers were designed to ameliorate the exploding gradient sometimes experienced by vanilla recurrent layers. We think that the reason this happens in vanilla layers because feed forward networks with great depth generally have the potential for exploding gradients. LSTMs have a feature in recurrent layers, sometimes called a "gate", which determines if information from the previous cell will be fed forward, or forgotten. 
+
+% main pixel RNN paper
+
+
+Pixel RNNs approximate the joint distribution of pixels in the image by treating each pixel as a product of conditional distributions of all pixels previously seen in that layer.  This converts the problem into a sequence problem, and the task becomes to predict the next pixel given the previously generated ones \cite{pixelRNN}. 
 
 Let $p(x)$ be the generated distribution for image $x$ with dimensions [$n$ x $n$], represented as a row of length $n^2$. We approximate $p(x)$ by: \\
 $p(x) = \prod_{i=1}^{n^2} p(x_i | x_1, ... , x_{i-1} )$
@@ -140,8 +138,6 @@ major improvement would be to implement GANs and possibly DCGANs (efficiency?) g
 pixel rnn is too slow on its own, prediction for each pixel --> suggest ways to speed up
 
 
-
-
 \begin{thebibliography}{1}
 \bibitem{pixelRNN} Conditional Image Generation with PixelCNN Decoders \url{https://arxiv.org/pdf/1606.05328v2.pdf}
 \bibitem{pixelRNN} Pixel Recurrent Neural Networks \url{https://arxiv.org/pdf/1601.06759v3}
@@ -149,12 +145,6 @@ pixel rnn is too slow on its own, prediction for each pixel --> suggest ways to 
 \bibitem{DCGAN} Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks \url{https://arxiv.org/pdf/1511.06434v2}
 \bibitem{inpaint} Semantic Image Inpainting with Perceptual and Contextual Losses \url{https://arxiv.org/pdf/1607.07539v2.pdf}
 \end{thebibliography}
-
-%
-\bibliographystyle{unsrtnat}
-\bibliography{milestone}
-
-
 
 
 \end{document}
