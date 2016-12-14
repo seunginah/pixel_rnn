@@ -36,6 +36,7 @@ from lib.data_utils import get_CIFAR10_data
 
 if len(sys.argv) < 3 or sys.argv[2] not in {'pixel_rnn', 'pixel_cnn'}:
     print 'Usage: python baseline.py use_small_data model'
+    sys.exit()
 
 USE_SMALL_DATA = bool(int(sys.argv[1]))
 MODEL = sys.argv[2] # either pixel_rnn or pixel_cnn
