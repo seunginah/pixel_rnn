@@ -431,6 +431,7 @@ if USE_SMALL_DATA:
     print 'Using small data'
 
 num_train = X_train.shape[0]
+num_test = X_test.shape[0]
 
 # Test on small train data while training to monitor progress
 # and save results here
