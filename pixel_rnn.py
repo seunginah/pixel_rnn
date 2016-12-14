@@ -286,9 +286,11 @@ def save_images(X, save_path):
     """
     
     # Make sure num_channels is the last axis
-    if X.shape[-1] != 3:
+    print X.shape
+    if X.shape[-1] != N_CHANNELS:
         X = X.transpose(0, 2, 3, 1)
 
+    print X.shape
     print 'Saving images'
     for i, img in enumerate(X):
         filename = save_path + str(i)
