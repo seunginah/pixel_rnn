@@ -322,7 +322,7 @@ def binarize(images):
     """
     return (numpy.random.uniform(size=images.shape) < images).astype('float32')
 
-def generate_and_save_samples(tag):
+def generate_and_save_samples(X, y, tag):
 
     def save_images(images, filename):
         """
@@ -335,15 +335,17 @@ def generate_and_save_samples(tag):
 
         scipy.misc.toimage(images, cmin=0.0, cmax=1.0).save('{}_{}.jpg'.format(filename, tag))
 
-    samples = numpy.zeros((100, HEIGHT, WIDTH, 1), dtype='float32')
+    #samples = numpy.zeros((100, HEIGHT, WIDTH, 1), dtype='float32')
+    samples = X
+    missing_start = int(32 * 0.25)  # 8
+    missing_end = int(32 * 0.75)    # 24
 
-    for i in xrange(HEIGHT):
-        for j in xrange(WIDTH):
+    for i in xrange(missing_start:missing_end):
+        for j in xrange(missing_start:missing_end):
             for k in xrange(N_CHANNELS):
-                next_sample = binarize(sample_fn(samples))
+                next_sample = sample_fn(samples)
                 samples[:, i, j, k] = next_sample[:, i, j, k]
-
-    save_images(samples, 'samples')
+    save_images(samples, MODEL +'samples')
 
 
 def make_minibatch(X_train, y_train, batch_size):
