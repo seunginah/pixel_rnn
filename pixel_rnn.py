@@ -28,6 +28,10 @@ import time
 import functools
 import itertools
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 from lib.data_utils import get_CIFAR10_data
 
 MODEL = 'pixel_rnn' # either pixel_rnn or pixel_cnn
@@ -254,20 +258,38 @@ def binarize(images):
     """
     return (numpy.random.uniform(size=images.shape) < images).astype('float32')
 
+def save_image(img, filename):
+    # Make sure num_channels is the last axis
+    if img.shape[-1] != 3:
+        img.transpose(0, 2, 3, 1)
+
+    plt.imshow(img.astype('uint8'))
+    plt.gca().axis('off')
+    plt.savefig(filename)
+
+def save_images(X, save_path):
+    """
+    Input:
+    - X: array of images of shape (num_images, num_channels, H, W)
+         or (num_images, H, W, num_channels)
+    """
+    
+    # Make sure num_channels is the last axis
+    if X.shape[-1] != 3:
+        X.transpose(0, 2, 3, 1)
+
+    num_images, H, W, num_channels = X.shape
+    if num_images > 3:
+        # Pick 3 images randomly
+        i = np.random.randint(0, num_images, 3)
+        X = X[i, :, :, :]
+
+    print 'Saving images'
+    for i, img in enumerate(X):
+        filename = save_path + str(i)
+        save_image(img, filename)
+
 def generate_and_save_samples(X, y, tag):
-
-    def save_images(images, filename):
-        """
-        images.shape: (batch, height, width, channels)
-        """
-        images = images.reshape((10,10,28,28))
-        # rowx, rowy, height, width -> rowy, height, rowx, width
-        images = images.transpose(1,2,0,3)
-        images = images.reshape((10*28, 10*28))
-
-        print 'Saving images'
-        scipy.misc.toimage(images, cmin=0.0, cmax=1.0).save('{}_{}.jpg'.format(filename, tag))
-
     samples = X
     missing_start = int(HEIGHT * 0.25)  # 8
     missing_end = int(HEIGHT * 0.75)    # 24
@@ -278,7 +300,7 @@ def generate_and_save_samples(X, y, tag):
                 next_sample = sample_fn(samples)
                 samples[:, i, j, k] = next_sample[:, i, j, k]
 
-    save_images(samples, 'samples')
+    save_images(samples, 'datasets/results/train/rnn_' + tag)
 
 def make_minibatch(X_train, y_train, batch_size):
     # Make a minibatch of training data
