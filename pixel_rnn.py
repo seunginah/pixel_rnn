@@ -353,7 +353,7 @@ else:
     cost = T.mean(T.nnet.binary_crossentropy(output, inputs))
 
     # Prediction
-    prediction = binarize(output)
+    #prediction = binarize(output)
 
 params = lib.search(cost, lambda x: hasattr(x, 'param'))
 lib.utils.print_params_info(params)
