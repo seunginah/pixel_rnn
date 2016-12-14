@@ -44,18 +44,8 @@ MODEL = sys.argv[2] # either pixel_rnn or pixel_cnn
 # Dataset
 HEIGHT = 32
 WIDTH = 32
-N_CHANNELS = 3
+N_CHANNELS = 1
 N_LABELS = 256
-
-# Other constants
-TEST_BATCH_SIZE = 100 # batch size to use when evaluating on dev/test sets. This should be the max that can fit into GPU memory.
-EVAL_DEV_COST = False # whether to evaluate dev cost during training
-GEN_SAMPLES = True # whether to generate samples during training (generating samples takes WIDTH*HEIGHT*N_CHANNELS full passes through the net)
-TRAIN_MODE = 'iters' # 'iters' to use PRINT_ITERS and STOP_ITERS, 'time' to use PRINT_TIME and STOP_TIME
-PRINT_ITERS = 2 # Print cost, generate samples, save model checkpoint every N iterations.
-STOP_ITERS = 100000 # Stop after this many iterations
-PRINT_TIME = 60*60 # Print cost, generate samples, save model checkpoint every N seconds.
-STOP_TIME = 60*60*2 # Stop after this many seconds of actual training (not including time req'd to generate samples etc.)
 
 # Hyperparams
 BATCH_SIZE = 100
