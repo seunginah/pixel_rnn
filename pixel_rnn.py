@@ -28,17 +28,24 @@ import time
 import functools
 import itertools
 
-MODEL = 'pixel_rnn' # either pixel_rnn or pixel_cnn
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
-# Hyperparams
-BATCH_SIZE = 100
-DIM = 64 # Model dimensionality.
-GRAD_CLIP = 1 # Elementwise grad clip threshold
+from lib.data_utils import get_CIFAR10_data
+
+if len(sys.argv) < 3 or sys.argv[2] not in {'pixel_rnn', 'pixel_cnn'}:
+    print 'Usage: python baseline.py use_small_data model'
+    sys.exit()
+
+USE_SMALL_DATA = bool(int(sys.argv[1]))
+MODEL = sys.argv[2] # either pixel_rnn or pixel_cnn
 
 # Dataset
-N_CHANNELS = 1
-WIDTH = 32
 HEIGHT = 32
+WIDTH = 32
+N_CHANNELS = 3
+N_LABELS = 256
 
 # Other constants
 TEST_BATCH_SIZE = 100 # batch size to use when evaluating on dev/test sets. This should be the max that can fit into GPU memory.
@@ -49,6 +56,16 @@ PRINT_ITERS = 2 # Print cost, generate samples, save model checkpoint every N it
 STOP_ITERS = 100000 # Stop after this many iterations
 PRINT_TIME = 60*60 # Print cost, generate samples, save model checkpoint every N seconds.
 STOP_TIME = 60*60*2 # Stop after this many seconds of actual training (not including time req'd to generate samples etc.)
+
+# Hyperparams
+BATCH_SIZE = 100
+DIM = 64 # Model dimensionality.
+GRAD_CLIP = 1 # Elementwise grad clip threshold
+
+# Other constants
+GEN_SAMPLES = True # whether to generate samples during training (generating samples takes WIDTH*HEIGHT*N_CHANNELS full passes through the net)
+N_EPOCHS = 50
+
 
 lib.utils.print_model_settings(locals().copy())
 from lib.data_utils import get_CIFAR10_data
@@ -251,6 +268,56 @@ def DiagonalBiLSTM(name, input_dim, inputs):
 
     return forward + backward
 
+
+def binarize(images):
+    """
+    Stochastically binarize values in [0, 1] by treating them as p-values of
+    a Bernoulli distribution.
+    """
+    return (numpy.random.uniform(size=images.shape) < images).astype('float32')
+
+def generate_and_save_samples(X, y, save_path, mode='test'):
+    samples = numpy.copy(X)
+    missing_start = int(HEIGHT * 0.25)  # 8
+    missing_end = int(HEIGHT * 0.75)    # 24
+
+    for i in xrange(missing_start, missing_end):
+        for j in xrange(missing_start, missing_end):
+            for k in xrange(N_CHANNELS):
+                next_sample = sample_fn(samples)
+                samples[:, i, j, k] = next_sample[:, i, j, k]
+
+    # Save
+    if X.shape[0] > 10:
+        # Pick 10 images randomly
+        i = numpy.random.randint(0, num_test, 10)
+        save_images(samples[i, :, :, :], save_path)
+        if mode == 'test':
+            save_images(X[i, :, :, :], save_path + '_missing')
+            save_images(y[i, :, :, :], save_path + '_ori')
+    else:
+        save_images(samples, save_path)
+        if mode == 'test':
+            save_images(X, save_path + 'missing')
+            save_images(y, save_path + 'ori')
+
+    # Compute RMSE
+    rmse = numpy.sqrt(numpy.mean(numpy.square(samples - y)))
+
+    return rmse
+
+
+def make_minibatch(X_train, y_train, batch_size):
+    # Make a minibatch of training data
+    num_train = X_train.shape[0]
+    batch_mask = numpy.random.choice(num_train, batch_size)
+    X_batch = X_train[batch_mask]
+    y_batch = y_train[batch_mask]
+
+    return X_batch, y_batch
+
+
+print 'Compiling network'
 # inputs.shape: (batch size, height, width, channels)
 inputs = T.tensor4('inputs')
 
@@ -274,12 +341,29 @@ output = relu(output)
 output = Conv2D('OutputConv2', DIM, DIM, 1, output, mask_type='b', he_init=True)
 output = relu(output)
 
-# TODO: for color images, implement a 256-way softmax for each RGB channel here
-output = Conv2D('OutputConv3', DIM, 1, 1, output, mask_type='b')
-output = T.nnet.sigmoid(output)
+if N_CHANNELS > 1:
+    # Softmax layer
+    output = Conv2D('OutputConv3', DIM, N_LABELS * N_CHANNELS, 1, output, mask_type='b')
+    output = output.reshape((-1, HEIGHT, WIDTH, N_LABELS, N_CHANNELS)) # (batch_size, 32, 32, 256, 3)
+    output = output.dimshuffle(0, 1, 2, 4, 3) # (batch_size, 32, 32, 3, 256)
+    output = T.nnet.softmax(output.reshape((-1, N_LABELS))) # (batch_size * 32 * 32 * 3, 256)
+    
+    # Loss
+    cost = T.mean(T.nnet.categorical_crossentropy(output, inputs.flatten().astype('int64')))
+    
+    # Prediction
+    prediction = T.argmax(output, axis=1).reshape((-1, HEIGHT, WIDTH, 3))    
 
-#cost = T.mean(T.nnet.categorical_crossentropy(output, inputs))
-cost = T.mean(T.nnet.binary_crossentropy(output, inputs))
+else:
+    # Sigmoid layer
+    output = Conv2D('OutputConv3', DIM, 1, 1, output, mask_type='b')
+    output = T.nnet.sigmoid(output)
+
+    # Loss
+    cost = T.mean(T.nnet.binary_crossentropy(output, inputs))
+
+    # Prediction
+    prediction = binarize(output)
 
 params = lib.search(cost, lambda x: hasattr(x, 'param'))
 lib.utils.print_params_info(params)
@@ -289,6 +373,7 @@ grads = [T.clip(g, lib.floatX(-GRAD_CLIP), lib.floatX(GRAD_CLIP)) for g in grads
 
 updates = lasagne.updates.adam(grads, params, learning_rate=1e-3)
 
+print 'Compiling functions'
 train_fn = theano.function(
     [inputs],
     cost,
@@ -308,56 +393,25 @@ sample_fn = theano.function(
     on_unused_input='warn'
 )
 
+print 'Loading CIFAR'
 batch_size = BATCH_SIZE
 data = get_CIFAR10_data(mode = 1, color=False)
-y_train = data['y_train']
+for k, v in data.iteritems():
+    print '%s: ' % k, v.shape
+
 X_train = data['X_train']
+y_train = data['y_train']
 small_X = X_train[:2]
 small_y = y_train[:2]
+X_test = data['X_test'][:100]
+y_test = data['y_test'][:100]
 
-def binarize(images):
-    """
-    Stochastically binarize values in [0, 1] by treating them as p-values of
-    a Bernoulli distribution.
-    """
-    return (numpy.random.uniform(size=images.shape) < images).astype('float32')
+if USE_SMALL_DATA:
+    X_train = X_train[:100]
+    y_train = y_train[:100]
+    print 'Using small data'
 
-def generate_and_save_samples(X, y, tag):
-
-    def save_images(images, filename):
-        """
-        images.shape: (batch, height, width, channels)
-        """
-        print images.shape
-        print images
-        images = images.reshape((10,10,28,28))
-        # rowx, rowy, height, width -> rowy, height, rowx, width
-        images = images.transpose(1,2,0,3)
-        images = images.reshape((10*28, 10*28))
-
-        scipy.misc.toimage(images, cmin=0.0, cmax=1.0).save('{}_{}.jpg'.format(filename, tag))
-
-    samples = X
-    missing_start = int(HEIGHT * 0.25)  # 8
-    missing_end = int(HEIGHT * 0.75)    # 24
-
-    for i in xrange(missing_start, missing_end):
-        for j in xrange(missing_start, missing_end):
-            for k in xrange(N_CHANNELS):
-                next_sample = sample_fn(samples)
-                samples[:, i, j, k] = next_sample[:, i, j, k]
-
-    save_images(samples, MODEL +'samples')
-
-
-def make_minibatch(X_train, y_train, batch_size):
-    # Make a minibatch of training data
-    num_train = X_train.shape[0]
-    batch_mask = numpy.random.choice(num_train, batch_size)
-    X_batch = X_train[batch_mask]
-    y_batch = y_train[batch_mask]
-
-    return X_batch, y_batch
+num_train = X_train.shape[0]
 
 print 'training on ', str(X_train.shape[0]), ' images \nbatch size: ', str(BATCH_SIZE) 
 total_iters = 0
@@ -366,64 +420,101 @@ last_print_time = 0.
 last_print_iters = 0
 
 num_train = X_train.shape[0]
+num_iters = num_train * N_EPOCHS / BATCH_SIZE
 
-for epoch in itertools.count():
-    print 'epoch: ', str(epoch)
 
-    costs = []
-    for itr in xrange(num_train / batch_size):
-        _, images = make_minibatch(X_train, y_train, batch_size)
-        print 'itr: ', str(itr)
-        images_reshaped = images.reshape((BATCH_SIZE, HEIGHT, WIDTH, N_CHANNELS))
-        images = binarize(images_reshaped)
-
-        start_time = time.time()
-        cost = train_fn(images)
-        total_time += time.time() - start_time
-        total_iters += 1
-
-        costs.append(cost)
-
-        if (TRAIN_MODE=='iters' and total_iters-last_print_iters == PRINT_ITERS) or \
-            (TRAIN_MODE=='time' and total_time-last_print_time >= PRINT_TIME):
-
-            dev_costs = []
-            if EVAL_DEV_COST:
-                for images, targets in dev_data():
-                    images = images.reshape((-1, HEIGHT, WIDTH, 1))
-                    binarized = binarize(images)
-                    dev_cost = eval_fn(binarized)
-                    dev_costs.append(dev_cost)
-            else:
-                dev_costs.append(0.)
-
-            print "epoch:{}\ttotal iters:{}\ttrain cost:{}\tdev cost:{}\ttotal time:{}\ttime per iter:{}".format(
+try:
+    for itr in xrange(num_iters):
+        _, images = make_minibatch(X_train, y_train, BATCH_SIZE)
+        new_cost = train_fn(images)
+    
+        # Print training progress every 10 iters    
+        if itr % 10 == 0:
+            epoch = itr * BATCH_SIZE / num_train
+            total_time = time.time() - start_time
+            print "epoch:{}\ttotal iters:{}\ttrain cost:{}\ttotal time:{}".format(
                 epoch,
-                total_iters,
-                numpy.mean(costs),
-                numpy.mean(dev_costs),
-                total_time,
-                total_time / total_iters
+                itr,
+                new_cost,
+                total_time
             )
-
-            tag = "iters{}_time{}".format(total_iters, total_time)
+        
+        # Test on small train data every 100 iters
+        if itr % 100 == 0:
+            tag = train_path + "itr{}".format(itr)
             if GEN_SAMPLES:
-                generate_and_save_samples(small_X, small_y, tag)
-            lib.save_params('params_{}.pkl'.format(tag))
+                generate_and_save_samples(small_X, small_y, tag, mode='train')
+            #lib.save_params('params_{}.pkl'.format(tag))
 
-            costs = []
-            last_print_time += PRINT_TIME
-            last_print_iters += PRINT_ITERS
+except KeyboardInterrupt:
+    print '\nTraining stopped'
 
-        if (TRAIN_MODE=='iters' and total_iters == STOP_ITERS) or \
-            (TRAIN_MODE=='time' and total_time >= STOP_TIME):
+print 'Testing'
+test_path = 'datasets/results/test/'+MODEL
+try:
+    os.makedirs(train_path)
+except OSError as exception:
+    pass
+rmse = generate_and_save_samples(X_test, y_test, test_path, mode='test')
 
-            print "Done!"
 
-            try: # This only matters on Ishaan's computer
-                import experiment_tools
-                experiment_tools.send_sms("done!")
-            except ImportError:
-                pass
+# for epoch in itertools.count():
+#     print 'epoch: ', str(epoch)
 
-            sys.exit()
+#     costs = []
+#     for itr in xrange(num_train / batch_size):
+#         _, images = make_minibatch(X_train, y_train, batch_size)
+#         print 'itr: ', str(itr)
+#         images_reshaped = images.reshape((BATCH_SIZE, HEIGHT, WIDTH, N_CHANNELS))
+#         images = binarize(images_reshaped)
+
+#         start_time = time.time()
+#         cost = train_fn(images)
+#         total_time += time.time() - start_time
+#         total_iters += 1
+
+#         costs.append(cost)
+
+#         if (TRAIN_MODE=='iters' and total_iters-last_print_iters == PRINT_ITERS) or \
+#             (TRAIN_MODE=='time' and total_time-last_print_time >= PRINT_TIME):
+
+#             dev_costs = []
+#             if EVAL_DEV_COST:
+#                 for images, targets in dev_data():
+#                     images = images.reshape((-1, HEIGHT, WIDTH, 1))
+#                     binarized = binarize(images)
+#                     dev_cost = eval_fn(binarized)
+#                     dev_costs.append(dev_cost)
+#             else:
+#                 dev_costs.append(0.)
+
+#             print "epoch:{}\ttotal iters:{}\ttrain cost:{}\tdev cost:{}\ttotal time:{}\ttime per iter:{}".format(
+#                 epoch,
+#                 total_iters,
+#                 numpy.mean(costs),
+#                 numpy.mean(dev_costs),
+#                 total_time,
+#                 total_time / total_iters
+#             )
+
+#             tag = "iters{}_time{}".format(total_iters, total_time)
+#             if GEN_SAMPLES:
+#                 generate_and_save_samples(small_X, small_y, tag)
+#             lib.save_params('params_{}.pkl'.format(tag))
+
+#             costs = []
+#             last_print_time += PRINT_TIME
+#             last_print_iters += PRINT_ITERS
+
+#         if (TRAIN_MODE=='iters' and total_iters == STOP_ITERS) or \
+#             (TRAIN_MODE=='time' and total_time >= STOP_TIME):
+
+#             print "Done!"
+
+#             try: # This only matters on Ishaan's computer
+#                 import experiment_tools
+#                 experiment_tools.send_sms("done!")
+#             except ImportError:
+#                 pass
+
+#             sys.exit()
