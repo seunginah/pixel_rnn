@@ -284,7 +284,7 @@ def save_images(X, save_path):
         save_image(img, filename)
 
 def generate_and_save_samples(X, y, save_path, mode='test'):
-    samples = np.copy(X)
+    samples = numpy.copy(X)
     missing_start = int(HEIGHT * 0.25)  # 8
     missing_end = int(HEIGHT * 0.75)    # 24
 
@@ -297,7 +297,7 @@ def generate_and_save_samples(X, y, save_path, mode='test'):
     # Save
     if X.shape[0] > 10:
         # Pick 10 images randomly
-        i = np.random.randint(0, num_test, 10)
+        i = numpy.random.randint(0, num_test, 10)
         save_images(samples[i, :, :, :], save_path)
         if mode == 'test':
             save_images(X[i, :, :, :], save_path + '_missing')
@@ -309,7 +309,7 @@ def generate_and_save_samples(X, y, save_path, mode='test'):
             save_images(y, save_path + 'ori')
 
     # Compute RMSE
-    rmse = np.sqrt(np.mean(np.square(samples - y)))
+    rmse = numpy.sqrt(numpy.mean(numpy.square(samples - y)))
 
     return rmse
 
