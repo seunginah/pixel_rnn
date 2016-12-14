@@ -35,6 +35,7 @@ import matplotlib.pyplot as plt
 from lib.data_utils import get_CIFAR10_data
 
 MODEL = sys.argv[2] # either pixel_rnn or pixel_cnn
+print MODEL
 
 # Dataset
 HEIGHT = 32
