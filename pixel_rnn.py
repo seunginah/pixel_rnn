@@ -273,7 +273,7 @@ def save_image(img, filename):
         img = img.transpose(1, 0, 2)
 
     print img.shape
-    plt.imshow(img(:,:, 1).astype('uint8'))
+    plt.imshow(img[:,:, 1].astype('uint8'))
     plt.gca().axis('off')
     plt.savefig(filename)
 
