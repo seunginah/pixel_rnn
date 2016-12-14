@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import numpy as np
 import theano
 import theano.tensor as T
@@ -51,6 +51,8 @@ def load_data(small_data=False, verbose=False):
           'y_train': data['y_train'][:num_train],
           'X_val': data['X_val'][:(num_train / 10)],
           'y_val': data['y_val'][:(num_train / 10)],
+          'X_test': data['X_test'],
+          'y_test': data['y_test']
         }
 
     if verbose:
@@ -59,19 +61,19 @@ def load_data(small_data=False, verbose=False):
 
     return data
 
-def make_minibatch(X_train, y_train, batch_size):
-    # Make a minibatch of training data
-    num_train = X_train.shape[0]
-    batch_mask = np.random.choice(num_train, batch_size)
-    X_batch = X_train[batch_mask]
-    y_batch = y_train[batch_mask]
+def make_minibatch(X, y, batch_size):
+    # Make a minibatch of data
+    num_images = X.shape[0]
+    batch_mask = np.random.choice(num_images, batch_size)
+    X_batch = X[batch_mask]
+    y_batch = y[batch_mask]
 
     return X_batch, y_batch
 
 def save_image(img, filename):
     # Make sure num_channels is the last axis
     if img.shape[-1] != 3:
-        img.transpose(0, 2, 3, 1)
+        img = img.transpose(1, 2, 0)
 
     plt.imshow(img.astype('uint8'))
     plt.gca().axis('off')
@@ -86,20 +88,14 @@ def save_images(X, save_path):
     
     # Make sure num_channels is the last axis
     if X.shape[-1] != 3:
-        X.transpose(0, 2, 3, 1)
-
-    num_images, H, W, num_channels = X.shape
-    if num_images > 3:
-        # Pick 3 images randomly
-        i = np.random.randint(0, num_images, 3)
-        X = X[i, :, :, :]
+        X = X.transpose(0, 2, 3, 1)
 
     print 'Saving images'
     for i, img in enumerate(X):
         filename = save_path + str(i)
         save_image(img, filename)
 
-def test(X_test, y_test, predict, save_path=None):
+def test(X_test, y_test, predict, save_path=None, mode='test'):
     """
     Input: X_test (num_test, num_channels, H, W)
     """
@@ -114,12 +110,31 @@ def test(X_test, y_test, predict, save_path=None):
     assert np.all(X_test[:, :, start:end, start:end] == 0), \
            'X_test missing region is not all zeros'
 
+    # Backup a copy of X_test before filling in the missing pixels
+    # for viz purposes
+    X_test_bkup = np.copy(X_test)
+
     # Predict missing pixels
     X_test[:, :, start:end, start:end] = predict(X_test)
 
-    # Save predicted images
+    # Make sure the center pixels of X_test_bkup are still completely missing
+    assert np.all(X_test_bkup[:, :, start:end, start:end] == 0), \
+           'X_test_bkup missing region is not all zeros'
+
+    # Save predicted images (plus missing and original ones if on test mode)
     if save_path is not None:
-        save_images(X_test, save_path)
+        if num_test > 10:
+            # Pick 10 images randomly
+            i = np.random.randint(0, num_test, 10)
+            save_images(X_test[i, :, :, :], save_path)
+            if mode == 'test':
+                save_images(X_test_bkup[i, :, :, :], save_path + 'missing')
+                save_images(y_test[i, :, :, :], save_path + 'ori')
+        else:
+            save_images(X_test, save_path)
+            if mode == 'test':
+                save_images(X_test_bkup, save_path + 'missing')
+                save_images(y_test, save_path + 'ori')
 
     # Compute RMSE
     rmse = np.sqrt(np.mean(np.square(X_test - y_test)))
@@ -134,7 +149,9 @@ def main(batch_size, seed, use_small_data, use_mse):
     # Load data
     data = load_data(small_data=use_small_data)
     X_train = data['X_train'].transpose(0, 3, 1, 2) # (num_train, num_channels, H, W)
-    y_train = data['y_train'].transpose(0, 3, 1, 2) # (num_test, num_channels, H, W)
+    y_train = data['y_train'].transpose(0, 3, 1, 2) # (num_train, num_channels, H, W)
+    X_test = data['X_test'][:100].transpose(0, 3, 1, 2) # (num_test, num_channels, H, W)
+    y_test = data['y_test'][:100].transpose(0, 3, 1, 2) # (num_test, num_channels, H, W)
     print 'X_train.shape:', X_train.shape
     print 'y_train.shape:', y_train.shape
 
@@ -222,6 +239,14 @@ def main(batch_size, seed, use_small_data, use_mse):
 
     # Train network
     print 'Training'
+
+    # Make sure directory exists to save training progress
+    train_path = SAVE_DIR + 'train/'
+    try:
+        os.makedirs(train_path)
+    except OSError as exception:
+        pass
+
     try:
         num_iters = num_train * NUM_EPOCHS / batch_size
         for itr in xrange(num_iters):
@@ -234,7 +259,8 @@ def main(batch_size, seed, use_small_data, use_mse):
             if itr % 100 == 0:
                 # Test current network on very small training data
                 print 'Testing current network on very small training data'
-                rmse = test(np.copy(small_X), np.copy(small_y), predict, SAVE_DIR + 'train/itr' + str(itr) + '_')
+                rmse = test(np.copy(small_X), np.copy(small_y), predict,
+                    train_path + 'itr' + str(itr) + '_', 'train')
                 
                 # Print training progress (loss)
                 print 'Epoch {} loss = {} rmse = {}'. \
@@ -244,7 +270,19 @@ def main(batch_size, seed, use_small_data, use_mse):
         pass
 
     # Test network
-    #test(data['X_test'])
+    print 'Testing'
+
+    # Make sure directory exists to save test results
+    test_path = SAVE_DIR + 'test/'
+    try:
+        os.makedirs(test_path)
+    except OSError as exception:
+        pass
+
+    rmse = test(X_test, y_test, predict, test_path, 'test')
+    print 'RMSE on test data:', rmse
+
+    print 'DONE WOOHOO!!!'
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
