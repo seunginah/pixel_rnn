@@ -51,6 +51,7 @@ N_LABELS = 256
 BATCH_SIZE = 100
 DIM = 64 # Model dimensionality.
 GRAD_CLIP = 1 # Elementwise grad clip threshold
+LEARNING_RATE = 0.01
 
 # Other constants
 GEN_SAMPLES = True # whether to generate samples during training (generating samples takes WIDTH*HEIGHT*N_CHANNELS full passes through the net)
@@ -383,7 +384,7 @@ lib.utils.print_params_info(params)
 grads = T.grad(cost, wrt=params, disconnected_inputs='warn')
 grads = [T.clip(g, lib.floatX(-GRAD_CLIP), lib.floatX(GRAD_CLIP)) for g in grads]
 
-updates = lasagne.updates.adam(grads, params, learning_rate=1e-3)
+updates = lasagne.updates.adam(grads, params, learning_rate=LEARNING_RATE)
 
 print 'Compiling functions'
 train_fn = theano.function(
