@@ -69,46 +69,37 @@ def make_minibatch(X_train, y_train, batch_size):
     return X_batch, y_batch
 
 def save_image(img, filename):
+    # Make sure num_channels is the last axis
+    if img.shape[-1] != 3:
+        img.transpose(0, 2, 3, 1)
+
     plt.imshow(img.astype('uint8'))
     plt.gca().axis('off')
     plt.savefig(filename)
 
-def save_images(X, Y_pred, Y_target, save_dir, tag):
+def save_images(X, save_path):
     """
     Input:
-    - X (num_images, num_channels, H, W): images with missing pixels
-    - Y_pred (num_images, num_channels, H, W): predicted images
-    - Y_target (num_images, num_channels, H, W): original images
+    - X: array of images of shape (num_images, num_channels, H, W)
+         or (num_images, H, W, num_channels)
     """
-    # Shuffle axes back into (num_images, H, W, num_channels)
-    X = X.transpose(0, 2, 3, 1)
-    Y_pred = Y_pred.transpose(0, 2, 3, 1)
-    Y_target = Y_target.transpose(0, 2, 3, 1)
+    
+    # Make sure num_channels is the last axis
+    if X.shape[-1] != 3:
+        X.transpose(0, 2, 3, 1)
 
     num_images, H, W, num_channels = X.shape
     if num_images > 3:
         # Pick 3 images randomly
         i = np.random.randint(0, num_images, 3)
         X = X[i, :, :, :]
-        Y_pred = Y_pred[i, :, :, :]
-        Y_target = Y_target[i, :, :, :]
-
-    # Debugging
-    #missing_start = int(H * 0.25)  # 8
-    #missing_end = int(H * 0.75)    # 24
-    #print Y_pred[:, missing_start:missing_end, missing_start:missing_end, :]
 
     print 'Saving images'
-    for i, (X_i, pred_i, target_i) in enumerate(zip(X, Y_pred, Y_target)):
-        filename1 = '{}missing{}_{}'.format(save_dir, i, tag)
-        filename2 = '{}pred{}_{}'.format(save_dir, i, tag)
-        filename3 = '{}ori{}_{}'.format(save_dir, i, tag)
+    for i, img in enumerate(X):
+        filename = save_path + str(i)
+        save_image(img, filename)
 
-        save_image(X_i, filename1)      # image with missing pixels
-        save_image(pred_i, filename2)   # predicted image
-        save_image(target_i, filename3) # original image
-
-def test(X_test, y_test, predict, save_dir=None, tag=None):
+def test(X_test, y_test, predict, save_path=None):
     """
     Input: X_test (num_test, num_channels, H, W)
     """
@@ -118,22 +109,17 @@ def test(X_test, y_test, predict, save_dir=None, tag=None):
     start = int(H * 0.25)  # 8
     end = int(H * 0.75)    # 24
     missing_len = start - end
+    
+    # Make sure the center pixels of X_test are completely missing
     assert np.all(X_test[:, :, start:end, start:end] == 0), \
            'X_test missing region is not all zeros'
 
-    # Create a copy of X_test before filling in missing pixels
-    # for viz purposes
-    if save_dir is not None:
-        X_test_bkup = np.copy(X_test) 
-
     # Predict missing pixels
     X_test[:, :, start:end, start:end] = predict(X_test)
-    assert np.all(X_test_bkup[:, :, start:end, start:end] == 0), \
-           'X_test_bkup missing region is not all zeros'
 
     # Save predicted images
-    if save_dir is not None:
-        save_images(X_test_bkup, X_test, y_test, save_dir, tag)
+    if save_path is not None:
+        save_images(X_test, save_path)
 
     # Compute RMSE
     rmse = np.sqrt(np.mean(np.square(X_test - y_test)))
@@ -155,6 +141,8 @@ def main(batch_size, seed, use_small_data, use_mse):
     # Images to check training progress on
     small_X = X_train[:2]
     small_y = y_train[:2]
+    save_images(small_X, SAVE_DIR + 'train/missing')
+    save_images(small_y, SAVE_DIR + 'train/ori')
 
     # Define network
     print 'Compiling network'
@@ -184,6 +172,7 @@ def main(batch_size, seed, use_small_data, use_mse):
     print lasagne.layers.get_output_shape(l_conv2)
 
     l_pool2 = lasagne.layers.MaxPool2DLayer(l_conv2, pool_size=(2, 2))
+    print lasagne.layers.get_output_shape(l_pool2)
 
     # Matrix of target pixels (batch_size, out_dim)
     target_output = T.imatrix('target_output')
@@ -245,7 +234,7 @@ def main(batch_size, seed, use_small_data, use_mse):
             if itr % 100 == 0:
                 # Test current network on very small training data
                 print 'Testing current network on very small training data'
-                rmse = test(np.copy(small_X), np.copy(small_y), predict, SAVE_DIR + 'train/', 'itr' + str(itr))
+                rmse = test(np.copy(small_X), np.copy(small_y), predict, SAVE_DIR + 'train/itr' + str(itr) + '_')
                 
                 # Print training progress (loss)
                 print 'Epoch {} loss = {} rmse = {}'. \
