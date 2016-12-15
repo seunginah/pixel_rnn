@@ -52,23 +52,25 @@ Our simplest model is a n layer CNN with regression between $X$ and $y$, using R
 Training a generative model can easily become intractable; we not only have to simulate high dimensional distributions, but also apply some kind of inference method to create a new sample. We decided to stick with feed-forward networks, where at test time the input is the incomplete image, and the output is the completed image. The following sections detail previous implementations of RNNs and CNNs adapted for sequentially scanning pixels in images.
 
 \subsection{Pixel Recurrent Neural Networks}
-The recurrent layers of an RNN have memory-like properties, which is why networks using specialized types of recurrent layers are called Long-Short Term Memory (LSTM) nets. These variants on recurrent layers were designed to ameliorate the exploding gradient sometimes experienced by vanilla recurrent layers. We think that the reason this happens in vanilla layers because feed forward networks with great depth generally have the potential for exploding gradients. LSTMs have a feature in recurrent layers, sometimes called a "gate", which determines if information from the previous cell will be fed forward, or forgotten. 
+The recurrent layers of an RNN have memory-like properties, which is why networks using specialized types of recurrent layers are called Long-Short Term Memory (LSTM) nets. These variants on recurrent layers were designed to ameliorate the exploding gradient sometimes experienced by vanilla recurrent layers. We think that the reason this happens in vanilla layers because feed forward networks with great depth generally have the potential for exploding gradients. At a high level, the way in which recurrent layers store previous information needs to be adjusted, in order to remember larger global patterns over iterations. LSTMs have a feature in recurrent layers, sometimes called a "gate", which determines if information from the previous cell will be fed forward, or forgotten. This gate is the hidden layer activation function, which for vanilla RNNs is often a sigmoid function. \cite{handwritingRNN}
+
+
+% handwriting RNN paper
+RNNs were used to generate convincing script from samples of handwriting. Previously, the handwriting generation problem posed a challenge because while the contextual information to generate individual letters may have been available from some models, many failed to learn higher-level sequences, such as stringing letters together. \cite{handwritingRNN} This seems particularly important in creating convincing samples of cursive handwriting styles. The cursive handwriting results from the network described by the Graves paper are pretty convincing. The inpainting problem is similar to handwriting generation in that it is important to preserve sequential features within and across layers.
+%TODO what hyperparameter might this be? 
 
 % main pixel RNN paper
+A study aimed to improve the efficiency of RNN architectures experimented with two different implementations of LSTMs that differed in the way they scanned across an image, collecting sequential data. The Row LSTM scans an image row by row, from top to bottom. The Diagonal Bidirectional LSTM (BiLSTM) simultaneously scans an image from the top left to the bottom right corner and from the top right to the bottom left corner. By skewing the inputs in a particular way, both diagonals are computed efficiently. The first step of the scanning is accomplished by a $1 \times 1$ convolution filter, which creates a tensor of $4h \times n \times n$ for $h$ hidden states and image with size $n \times n$. This can be thought of as a sliding mask. The second step is a column-wise sweep with a $2  \times  1$ convolution filter, which isn't masked. This is the part that facilitates recurrence within the layer. The authors noted that because the Diagonal LSTM already has a good receptive field with the second $2  \times  1$ kernel, increasing the size shouldn't improve the receptive field much. For both types of Pixel RNNs, van den Oord et al. suggest that networks can have up to 12 layers.
 
 
-Pixel RNNs approximate the joint distribution of pixels in the image by treating each pixel as a product of conditional distributions of all pixels previously seen in that layer.  This converts the problem into a sequence problem, and the task becomes to predict the next pixel given the previously generated ones \cite{pixelRNN}. 
-
-Let $p(x)$ be the generated distribution for image $x$ with dimensions [$n$ x $n$], represented as a row of length $n^2$. We approximate $p(x)$ by: \\
-$p(x) = \prod_{i=1}^{n^2} p(x_i | x_1, ... , x_{i-1} )$
-
+% BiLSTM, Diagonal LSTM
 
 \subsection{Pixel Convolutional Neural Networks}
 Pixel CNN is like Pixel RNN, but uses convolutional layers to cut computational costs \cite{pixelCNN}.
 
 \section{Approach}
 % Approach: This section details the framework of your project. Be specific, which means you might want to include equations, figures, plots, etc
-Given an image with a square region of missing pixels, our goal is to fill in the missing pixels to create a cohesive image. We will use the CIFAR-10 dataset, which consists of $60,000$ images evenly distributed into 10 classes (airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck). Each $32$ x $32$ x $3$ pixel image is represented by the RGB color model. We will remove a square region of each image, and consider the original image to be the original distribution of $32$ x $32$ x $3 = 3,072$ dimensions. 
+Given an image with a square region of missing pixels, our goal is to fill in the missing pixels to create a cohesive image. We will use the CIFAR-10 dataset, which consists of $60,000$ images evenly distributed into 10 classes (airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck). Each $32 \times 32 \times 3$ pixel image is represented by the RGB color model. We will remove a square region of each image, and consider the original image to be the original distribution of $32 \times 32 \times 3 = 3,072$ dimensions. 
 
 \par As our baseline, we will implement a convolutional neural net (CNN) with mean squared error (MSE) loss between incomplete and original images, to perform regression on the intensities of the missing pixels. From here, we will each investigate different generative modeling methods to improve the baseline score using the same evaluation.
 
@@ -81,6 +83,16 @@ This is what our incomplete images look like after we mask part of it:
 Once we create a model that we can generate samples from, we'll use the model to create filled-in images $\hat{y}$.
 
 Given the set of generated images $\hat{y}$. and corresponding original images $y$, we want to learn network parameters  $ \theta = [W_1, b_1, W_2, b_2, W_3, b_3]$ that minimize the MSE between generated and original images (or between incomplete and original images for the baseline case). 
+
+
+
+Pixel RNNs approximate the joint distribution of pixels in the image by treating each pixel as a product of conditional distributions of all pixels previously seen in that layer.  This converts the problem into a sequence problem, and the task becomes to predict the next pixel given the previously generated ones \cite{pixelRNN}. 
+
+Let $p(x)$ be the generated distribution for image $x$ with dimensions $n \times n$, represented as a row of length $n^2$. We approximate $p(x)$ by: \\
+$p(x) = \prod_{i=1}^{n^2} p(x_i | x_1, ... , x_{i-1} )$
+
+
+
 
 \section{Experiments} 
 % This section begins with what kind of experiments you're doing, what kind of dataset(s) you're using, and what is the way you measure or evaluate your results. It then shows in details the results of your experiments. By details, we mean both quantitative evaluations (show numbers, figures, tables, etc) as well as qualitative results (show images, example results, etc).
@@ -95,9 +107,8 @@ We have implemented a 3-layer CNN with regression using the following architectu
 %$Convolutional \rightarrow ReLU \rightarrow 2x2 Max pooling \rightarrow affine \rightarrow ReLU \rightarrow affine \rightarrow MSE$
 
 \begin{itemize}
-\item Input: [32 x 32 x 3] raw pixel values
-\item Convolutional layer with [7 x 7] filter
-%\subitem results [32 x 32 x 7]
+\item Input: $32  \times  32  \times  3$ raw pixel values
+\item Convolutional layer with $7  \times  7$ filter
 \item ReLU activation
 \item Pooling layer [2 x 2]
 %: results [16 x 16 x 7]
@@ -139,8 +150,10 @@ pixel rnn is too slow on its own, prediction for each pixel --> suggest ways to 
 
 
 \begin{thebibliography}{1}
-\bibitem{pixelRNN} Conditional Image Generation with PixelCNN Decoders \url{https://arxiv.org/pdf/1606.05328v2.pdf}
 \bibitem{pixelRNN} Pixel Recurrent Neural Networks \url{https://arxiv.org/pdf/1601.06759v3}
+\bibitem{handwritingRNN} Generating Sequences with Recurrent Neural Networks \url{https://arxiv.org/pdf/1308.0850v5.pdf}
+\bibitem{pixelCNN} Conditional Image Generation with PixelCNN Decoders \url{https://arxiv.org/pdf/1606.05328v2.pdf}
+
 \bibitem{GAN} Generative Adversarial Nets \url{http://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf}
 \bibitem{DCGAN} Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks \url{https://arxiv.org/pdf/1511.06434v2}
 \bibitem{inpaint} Semantic Image Inpainting with Perceptual and Contextual Losses \url{https://arxiv.org/pdf/1607.07539v2.pdf}
