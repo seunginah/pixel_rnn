@@ -67,7 +67,6 @@ CNNs, despite lacking some kind of inherent sequential structure, can be modifie
 % Approach: This section details the framework of your project. Be specific, which means you might want to include equations, figures, plots, etc
 
 \subsection{Models}
-%%Given the set of generated images $\hat{y}$. and corresponding original images $y$, we want to learn network parameters  $ \theta = [W_1, b_1, W_2, b_2, W_3, b_3]$ that minimize the MSE between generated and original images (or between incomplete and original images for the baseline case). 
 In the following sections, we will outline the different training methods that we will implement. Once we train models that we can generate samples from, we'll use the model to create filled-in images $\hat{y}$. \\
 
 The following sections describe the models we want to experiment with. After experimentation, we will optimize the model that we find most promising. We will use Root Mean Squared Error (RMSE) to compare models. The RMSE will give us an idea of how well our generated images compare to the originals; however, the problem is to generate any plausible images, so we will also randomly sample images for human judgment. We will ask judges to rate an image as "plausible" or "not plausible", and determine which models generate the most believable images. If a sufficient number of samples are generated, we will calculate inter-annotator agreement for the samples across human judges. 
@@ -76,19 +75,12 @@ The following sections describe the models we want to experiment with. After exp
 \par As our baseline, we will implement a convolutional neural net (CNN) with mean squared error (MSE) loss between incomplete and original images, to perform regression on the intensities of the missing pixels. From here, we will each investigate different generative modeling methods to improve the baseline score using the same evaluation.
 
 %%%%%%%%%%%%%%% CNN regression ARCHITECTURE
-
-%TODO x layer
-We compare the performance of a x layer CNN using regression with RMSE loss.
-%Intermediate/Preliminary Results: State and evaluate your results upto the milestone
 We have implemented a 3-layer CNN with regression using the following architecture: 
-%$Convolutional \rightarrow ReLU \rightarrow 2x2 Max pooling \rightarrow affine \rightarrow ReLU \rightarrow affine \rightarrow MSE$
-
 \begin{itemize}
 \item Input: $32  \times  32  \times  3$ raw pixel values
 \item Convolutional layer with $7  \times  7$ filter
 \item ReLU activation
 \item Pooling layer [2 x 2]
-%: results [16 x 16 x 7]
 \item Affine
 \item ReLU activation
 \item Affine
@@ -114,36 +106,30 @@ $p(x) = \prod_{i=1}^{n^2} p(x_i | x_1, ... , x_{i-1} )$
 
 \section{Experiments} 
 % This section begins with what kind of experiments you're doing, what kind of dataset(s) you're using, and what is the way you measure or evaluate your results. It then shows in details the results of your experiments. By details, we mean both quantitative evaluations (show numbers, figures, tables, etc) as well as qualitative results (show images, example results, etc).
-
 \subsection{Data}
 We used the CIFAR-10 dataset, which consists of $60,000$ images evenly distributed into 10 classes (airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck). Each $32 \times 32 \times 3$ pixel image is represented by the RGB color model, so it has 3 channels. We will remove a $16 \times 16$ region of each image, and consider the original image to be the original distribution of $32 \times 32 \times 3 = 3,072$ dimensions. All images have normalized pixel intensities. \\
 
-This is what our incomplete images look like after we remove the center pixels:
+This is what our incomplete images look like after we remove the center pixels.\\
 \includegraphics[width=1.0\linewidth]{img_sample.png}
 
 %% how much in train and test set
 We used 50,000 images for training and 10,000 images for testing. The testing images were not seen during training.
 
 \subsection{Setup}
-% AWS resources
-% cs231 kernel used (reference tutorial)
-% instance size
-% spot instance -- learnings about complex vs simpler models
 In order to run the models, we had to use the Elastic Cloud product offered by Amazon Web Services. We used the Amazon Marketplace Image (AMI) called \textit{cs231n \_caffe \_torch7 \_keras \_lasagne \_v2}, developed by the CS231N course \cite{aws_tutorial}. We set it up on a g2.xlarge instance, which was limited to spot requests. 
 
 \subsection{Results}
-Table 1 shows the RMSE values for the models, as well as the number of samples deemed to be convincing by human judges. 
-%TODO fillthis table
+Table 1 shows the RMSE values for the models, as well as the number of samples deemed to be convincing by human judges. If the entry in the table is not filled, it means that our model never finished training to the point where we could generate samples.
 \begin{table}[!ht]
 \centering
-\caption{Each of 3 human judges saw x samples each, totaling x samples for each model}
+\caption{Each of 3 human judges saw 10 samples each, totaling 30 total samples for each model}
 \begin{tabular}{lll}
 \hline
 Model               & Test RMSE & \# Convincing samples \\ \hline
-CNN with Regression & 24.468    &                       \\
-Pixel RNN w Sigmoid &           &                       \\
-Pixel RNN w Softmax &           &                       \\
-Pixel CNN           &           &                       \\ \hline
+CNN with Regression & 24.468    &  4                     \\
+Pixel RNN w Sigmoid &   -       &  -                     \\
+Pixel RNN w Softmax &           &  10                     \\
+Pixel CNN           &   -       &  -                     \\ \hline
 \end{tabular}
 \end{table}
 
@@ -151,6 +137,8 @@ Pixel CNN           &           &                       \\ \hline
 \textbf{CNN with Regression}
 Samples from training: the images in the top row are the original and the incomplete, respectively. \\
 \includegraphics[width=0.8\linewidth]{baseline_train_frog.jpg} 
+
+More samples from training CNN with Regression. \\
 \includegraphics[width=0.8\linewidth]{baseline_train_truck.jpg} 
 
 Samples from testing: the left column is the original image, the right column is the inpainted image \\
@@ -158,25 +146,18 @@ Samples from testing: the left column is the original image, the right column is
 
 \textbf{Pixel RNN w Softmax}
 Samples from training: the images in the top row are the original and the incomplete, respectively. \\
-\includegraphics[width=0.8\linewidth]{baseline_train_frog.jpg} 
-\includegraphics[width=0.8\linewidth]{baseline_train_truck.jpg} 
+\includegraphics[width=0.8\linewidth]{rnn_rgb_train_frog.jpg} 
+\includegraphics[width=0.8\linewidth]{rnn_rgb_train_truck.jpg} 
 
 Samples from testing: the left column is the original image, the right column is the inpainted image \\
 \includegraphics[width=0.8\linewidth]{baseline_test.jpg} 
 
-
-
-
 \section{Conclusion}
 % Conclusion: What have you learned? Suggest future ideas.
-
-%%%%% FUTURE IDEAS
-%% data improvements
 We received a helpful suggestion that using photos from the same domain would improve the performance of our models. By running the same models on a face dataset, we might have achieved better results, such as those achieved by van der Oord et al. with a variant of the Pixel CNN \cite{pixelCNN}. Another idea to consider is ordering the training examples for the RNNs such that we feed all the airplane pictures in a chunk, so that airplane specific features can be persisted across layers, rather than feeding a randomized assortment of images from different classes.\\
 
 Improving our evaluation system would be a worthwhile next step. If we improve the way we collect annotations from human judges such that we have a large volume of them, we could calculate statistics such as inter-annotator agreement and determine if certain images are harder to complete in a convincing way. We could also replace the RMSE as a method of technically comparing model performances, since it doesn't accurately capture our goal. Contextual loss, which measures the context similarity between the generated region of an image with the rest of the image, is one possible loss function. Perceptual loss is meant to encourage a network to create samples that are similar to those already seen in training. These losses are described in a paper that uses Generative Adversarial Networks (GANs) to solve image completion \cite{inpaint}. An implementation of contextual and perceptual loss for Pixel RNN and Pixel CNN would be a great addition to this project. \\
 
-%% low level modeling
 The Pixel RNN, although it was made faster by the Diagonal BiLSTM layers, was still very slow. Training with 8 gpus on a g2.xlarge instance took days. The multi-scale version of Pixel RNN described by van der Oord et al. describes an implementation that takes advantage of the parallelized computations allowed by Pixel CNN, by combining unconditional as well as conditional generative networks \cite{pixelRNN}. \\
 
 Finally, a big aspect of the learning done in this project is the practical experience of standing up a model on GPU computing. One particularly important lesson we learned is that because training outcomes for these models can be sensitive to the number of training examples, iterations, or epochs, models that can be fully run in a short amount of time are more likely to be well-tuned. Being inexperienced with using the AWS cluster services, we underestimated the limitations of access to p2 or g2 instances. We weren't able to tune hyperparameters for the Pixel RNN models on the full datasets, since they took so long to train. Within the scope of our project and our results, we find that images we were able to generate with the complex Pixel RNN, which took days to train, weren't that much more convincing than the ones generated by the simpler CNN with Regression.
