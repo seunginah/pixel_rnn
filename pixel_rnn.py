@@ -35,23 +35,23 @@ import matplotlib.pyplot as plt
 from lib.data_utils import get_CIFAR10_data
 
 if len(sys.argv) < 3 or sys.argv[2] not in {'pixel_rnn', 'pixel_cnn'}:
-    print 'Usage: python baseline.py use_small_data model'
+    print 'Usage: python baseline.py use_small_data model num_filters learning_rate'
     sys.exit()
 
-USE_SMALL_DATA = bool(int(sys.argv[1]))
-MODEL = sys.argv[2] # either pixel_rnn or pixel_cnn
+USE_SMALL_DATA = bool(int(sys.argv[1])) # use 100 first training examples if True, else full data
+MODEL = sys.argv[2]              # either pixel_rnn or pixel_cnn
+
+# Hyperparams
+DIM = int(sys.argv[3])           # number of hidden units (32, 64, 128)
+LEARNING_RATE = int(sys.argv[4]) # 0.01, 0.001
+BATCH_SIZE = 100
+GRAD_CLIP = 1                    # elementwise grad clip threshold
 
 # Dataset
 HEIGHT = 32
 WIDTH = 32
 N_CHANNELS = 3
 N_LABELS = 256
-
-# Hyperparams
-BATCH_SIZE = 100
-DIM = 64 # Model dimensionality.
-GRAD_CLIP = 1 # Elementwise grad clip threshold
-LEARNING_RATE = 0.01
 
 # Other constants
 GEN_SAMPLES = True # whether to generate samples during training (generating samples takes WIDTH*HEIGHT*N_CHANNELS full passes through the net)
