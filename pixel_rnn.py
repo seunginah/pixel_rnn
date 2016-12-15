@@ -39,13 +39,13 @@ if len(sys.argv) < 3 or sys.argv[2] not in {'pixel_rnn', 'pixel_cnn'}:
     sys.exit()
 
 USE_SMALL_DATA = bool(int(sys.argv[1])) # use 100 first training examples if True, else full data
-MODEL = sys.argv[2]              # either pixel_rnn or pixel_cnn
+MODEL = sys.argv[2]                     # either pixel_rnn or pixel_cnn
 
 # Hyperparams
-DIM = int(sys.argv[3])           # number of hidden units (32, 64, 128)
-LEARNING_RATE = int(sys.argv[4]) # 0.01, 0.001
+DIM = int(sys.argv[3])                  # number of hidden units (32, 64, 128)
+LEARNING_RATE = float(sys.argv[4])      # 0.01, 0.001
 BATCH_SIZE = 100
-GRAD_CLIP = 1                    # elementwise grad clip threshold
+GRAD_CLIP = 1                           # elementwise grad clip threshold
 
 # Dataset
 HEIGHT = 32
