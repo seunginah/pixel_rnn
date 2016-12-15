@@ -35,7 +35,7 @@ import matplotlib.pyplot as plt
 from lib.data_utils import get_CIFAR10_data
 
 if len(sys.argv) < 3 or sys.argv[2] not in {'pixel_rnn', 'pixel_cnn'}:
-    print 'Usage: python baseline.py use_small_data model num_filters learning_rate'
+    print 'Usage: python pixel_rnn.py use_small_data model num_filters learning_rate'
     sys.exit()
 
 USE_SMALL_DATA = bool(int(sys.argv[1])) # use 100 first training examples if True, else full data
