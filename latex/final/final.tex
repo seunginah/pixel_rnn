@@ -43,8 +43,6 @@ Image completion, also called content-aware fill or inpainting, is a generative 
 \par 
 We will experiment with training generative models on observations of incomplete images $X$, and targets of original images $y$. The original images are from the CIFAR-10 dataset, and the incomplete versions have a square region removed from the center of the image. Using RNNs and CNNs, we will attempt to learn neuron weights to attempt modeling the area in $y$ corresponding to the missing region. We will randomly generate samples from these predictions, insert them into incomplete images, and use human judgment to determine if the predicted images are plausible. As a technical means of evaluation, we will use RMSE between $\hat y$ and $y$ to measure how different the images are. However, our main goal is to be able to complete images in general, which is why our hold out test set is comprised of incomplete images unknown to the model. For this reason, we don't consider RMSE to be the most important metric.\\
 
-%TODO check if language in this paragraph sounds right...
-%TODO more accurately describe the "simpler CNN" as nonlinear model bc of ReLU activation layers
 Our simplest model is a n layer CNN with regression between $X$ and $y$, using RMSE loss. We also used RNNs designed to read pixels sequentially; one model used a pre-existing implementation of pixel RNN with sigmoidal output, the other model had 256-way categorical cross-entropy ("softmax loss"). We also used an adaptation of CNNs designed to emulate the sequential information feeding within a recurrent layer. We expected that the complex models, which sequentially approximate the joint distribution for each pixel, would outperform the simpler CNN using regression.\\
 
 \section{Related Work} 
@@ -54,52 +52,33 @@ Training a generative model can easily become intractable; we not only have to s
 \subsection{Pixel Recurrent Neural Networks}
 The recurrent layers of an RNN have memory-like properties, which is why networks using specialized types of recurrent layers are called Long-Short Term Memory (LSTM) nets. These variants on recurrent layers were designed to ameliorate the exploding gradient sometimes experienced by vanilla recurrent layers. We think that the reason this happens in vanilla layers because feed forward networks with great depth generally have the potential for exploding gradients. At a high level, the way in which recurrent layers store previous information needs to be adjusted, in order to remember larger global patterns over iterations. LSTMs have a feature in recurrent layers, sometimes called a "gate", which determines if information from the previous cell will be fed forward, or forgotten. This gate is the hidden layer activation function, which for vanilla RNNs is often a sigmoid function. \cite{handwritingRNN}\\
 
-
 % handwriting RNN paper
 RNNs were used to generate convincing script from samples of handwriting. Previously, the handwriting generation problem posed a challenge because while the contextual information to generate individual letters may have been available from some models, many failed to learn higher-level sequences, such as stringing letters together. \cite{handwritingRNN} This seems particularly important in creating convincing samples of cursive handwriting styles. The cursive handwriting results from the network described by the Graves paper are pretty convincing. The inpainting problem is similar to handwriting generation in that it is important to preserve sequential features within and across layers.\\
 %TODO what hyperparameter might this be? 
 
 % main pixel RNN paper
 \par
-A study aimed to improve the efficiency of RNN architectures experimented with two different implementations of LSTMs that differed in the way they scanned across an image, collecting sequential data. The Row LSTM scans an image row by row, from top to bottom. The Diagonal Bidirectional LSTM (BiLSTM) simultaneously scans an image from the top left to the bottom right corner and from the top right to the bottom left corner. By skewing the inputs in a particular way, both diagonals are computed efficiently. The first step of the scanning is accomplished by a $1 \times 1$ convolution filter, which creates a tensor of $4h \times n \times n$ for $h$ hidden states and image with size $n \times n$. This can be thought of as a sliding mask. The second step is a column-wise sweep with a $2  \times  1$ convolution filter, which isn't masked. This is the part that facilitates recurrence within the layer. The authors noted that because the Diagonal LSTM already has a good receptive field with the second $2  \times  1$ kernel, increasing the size shouldn't improve the receptive field much. For both types of Pixel RNNs, van den Oord et al. suggest that networks can have up to 12 layers. A downside of LSTM layers is that you cannot parallelize the processes, as they must be computed sequentially. \cite{pixelRNN}
+A study aimed to improve the efficiency of RNN architectures experimented with two different implementations of LSTMs that differed in the way they scanned across an image, collecting sequential data. The Row LSTM scans an image row by row, from top to bottom. The Diagonal Bidirectional LSTM (BiLSTM) simultaneously scans an image from the top left to the bottom right corner and from the top right to the bottom left corner. By skewing the inputs in a particular way, both diagonals are computed efficiently. The first step of the scanning is accomplished by a $1 \times 1$ convolution filter, which creates a tensor of $4h \times n \times n$ for $h$ hidden states and image with size $n \times n$. This can be thought of as a sliding mask. The second step is a column-wise sweep with a $2  \times  1$ convolution filter, which isn't masked. This is the part that facilitates recurrence within the layer. The authors noted that because the Diagonal LSTM already has a good receptive field with the second $2  \times  1$ kernel, increasing the size shouldn't improve the receptive field much. For both types of Pixel RNNs, van den Oord et al. suggest that networks can have up to 12 layers. A downside of LSTM layers is that you cannot parallelize the processes, as they must be computed sequentially \cite{pixelRNN}. \\
 
 \subsection{Pixel Convolutional Neural Networks}
-CNNs, despite lacking some kind of inherent sequential structure, can be modified to emulate the scanning accomplished by LSTM layers, without the cost associated with sequential computations. Using a convolutional filter to capture smaller areas of images and compute features within those receptive fields is a way to create a sliding mask over an image \cite{pixelRNN}. These computations can be parallelized, which makes the Pixel CNN worth exploring, since we weren't certain how long Pixel RNN would take to train. 
+CNNs, despite lacking some kind of inherent sequential structure, can be modified to emulate the scanning accomplished by LSTM layers, without the cost associated with sequential computations. Using a convolutional filter to capture smaller areas of images and compute features within those receptive fields is a way to create a sliding mask over an image \cite{pixelRNN}. These computations can be parallelized, which makes the Pixel CNN worth exploring, since we weren't certain how long Pixel RNN would take to train. \\
 
 \section{Approach}
 % Approach: This section details the framework of your project. Be specific, which means you might want to include equations, figures, plots, etc
-Given an image with a square region of missing pixels, our goal is to fill in the missing pixels to create a cohesive image. We will use the CIFAR-10 dataset, which consists of $60,000$ images evenly distributed into 10 classes (airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck). Each $32 \times 32 \times 3$ pixel image is represented by the RGB color model. We will remove a square region of each image, and consider the original image to be the original distribution of $32 \times 32 \times 3 = 3,072$ dimensions. 
 
+\subsection{Models}
+%%Given the set of generated images $\hat{y}$. and corresponding original images $y$, we want to learn network parameters  $ \theta = [W_1, b_1, W_2, b_2, W_3, b_3]$ that minimize the MSE between generated and original images (or between incomplete and original images for the baseline case). 
+In the following sections, we will outline the different training methods that we will implement. Once we train models that we can generate samples from, we'll use the model to create filled-in images $\hat{y}$. \\
+
+The following sections describe the models we want to experiment with. After experimentation, we will optimize the model that we find most promising. We will use Root Mean Squared Error (RMSE) to compare models. The RMSE will give us an idea of how well our generated images compare to the originals; however, the problem is to generate any plausible images, so we will also randomly sample images for human judgment. We will ask judges to rate an image as "plausible" or "not plausible", and determine which models generate the most believable images. If a sufficient number of samples are generated, we will calculate inter-annotator agreement for the samples across human judges. 
+
+\subsubsection{CNN with Regression}
 \par As our baseline, we will implement a convolutional neural net (CNN) with mean squared error (MSE) loss between incomplete and original images, to perform regression on the intensities of the missing pixels. From here, we will each investigate different generative modeling methods to improve the baseline score using the same evaluation.
 
-\par After experimentation, we will optimize one or two models that we find most promising. We will use Root Mean Squared Error (RMSE) to compare models. The RMSE will give us an idea of how well our generated images compare to the originals; however, the problem is to generate any plausible images, so we will also randomly sample images for human judgment. We will ask judges to rate an image as "plausible" or "not plausible", and determine which models generate the most believable images. 
-
-This is what our incomplete images look like after we mask part of it:
-
-\includegraphics[width=1.0\linewidth]{img_sample.png}
-
-Once we create a model that we can generate samples from, we'll use the model to create filled-in images $\hat{y}$.
-
-Given the set of generated images $\hat{y}$. and corresponding original images $y$, we want to learn network parameters  $ \theta = [W_1, b_1, W_2, b_2, W_3, b_3]$ that minimize the MSE between generated and original images (or between incomplete and original images for the baseline case). 
-
-
-
-Pixel RNNs approximate the joint distribution of pixels in the image by treating each pixel as a product of conditional distributions of all pixels previously seen in that layer.  This converts the problem into a sequence problem, and the task becomes to predict the next pixel given the previously generated ones \cite{pixelRNN}. 
-
-Let $p(x)$ be the generated distribution for image $x$ with dimensions $n \times n$, represented as a row of length $n^2$. We approximate $p(x)$ by: \\
-$p(x) = \prod_{i=1}^{n^2} p(x_i | x_1, ... , x_{i-1} )$
-
-
-
-
-\section{Experiments} 
-% This section begins with what kind of experiments you're doing, what kind of dataset(s) you're using, and what is the way you measure or evaluate your results. It then shows in details the results of your experiments. By details, we mean both quantitative evaluations (show numbers, figures, tables, etc) as well as qualitative results (show images, example results, etc).
-In the following sections, we will outline the different training methods that we will implement. 
+%%%%%%%%%%%%%%% CNN regression ARCHITECTURE
 
 %TODO x layer
 We compare the performance of a x layer CNN using regression with RMSE loss.
-
-
 %Intermediate/Preliminary Results: State and evaluate your results upto the milestone
 We have implemented a 3-layer CNN with regression using the following architecture: 
 %$Convolutional \rightarrow ReLU \rightarrow 2x2 Max pooling \rightarrow affine \rightarrow ReLU \rightarrow affine \rightarrow MSE$
@@ -116,44 +95,90 @@ We have implemented a 3-layer CNN with regression using the following architectu
 \item Output: sum previous layer, use RMSE loss function
 \end{itemize}
 
-This is not the final architecture we will use, we just decided to start with the architecture from Assignment 2 while we debug these first steps. 
+\subsubsection{Pixel RNN with Sigmoid output}
+Pixel RNNs approximate the joint distribution of pixels in the image by treating each pixel as a product of conditional distributions of all pixels previously seen in that layer.  This converts the problem into a sequence problem, and the task becomes to predict the next pixel given the previously generated ones \cite{pixelRNN}. 
 
-We then trained the network for 1 epoch and achieved training RMSE of 120.323 and validation RMSE of 153.462. Our network is currently overfit, and since the values of the data range from 0.0 - 255.0, these RMSE values are quite high. We expect high RMSE because this is just the baseline network, but we are currently checking to make sure there aren't other issues causing such a high RMSE.
+Let $p(x)$ be the generated distribution for image $x$ with dimensions $n \times n$, represented as a row of length $n^2$. We approximate $p(x)$ by: \\
+$p(x) = \prod_{i=1}^{n^2} p(x_i | x_1, ... , x_{i-1} )$
+
+\subsubsection{Pixel RNN with 256-Way Softmax output}
+
+%%%%%%%%%%%%%%% pixel RNN ARCHITECTURE
+
+
+\subsubsection{Pixel CNN}
+
+%%%%%%%%%%%%%%% pixel CNN ARCHITECTURE
+
+
+
+\section{Experiments} 
+% This section begins with what kind of experiments you're doing, what kind of dataset(s) you're using, and what is the way you measure or evaluate your results. It then shows in details the results of your experiments. By details, we mean both quantitative evaluations (show numbers, figures, tables, etc) as well as qualitative results (show images, example results, etc).
+
+\subsection{Data}
+We used the CIFAR-10 dataset, which consists of $60,000$ images evenly distributed into 10 classes (airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck). Each $32 \times 32 \times 3$ pixel image is represented by the RGB color model, so it has 3 channels. We will remove a $16 \times 16$ region of each image, and consider the original image to be the original distribution of $32 \times 32 \times 3 = 3,072$ dimensions. All images have normalized pixel intensities. \\
+
+This is what our incomplete images look like after we remove the center pixels:
+\includegraphics[width=1.0\linewidth]{img_sample.png}
+
+%% how much in train and test set
+
+%% did we use smaller datasets to get the results or full size?
+
+
+\subsection{Setup}
+% AWS resources
+% cs231 kernel used (reference tutorial)
+% instance size
+% spot instance -- learnings about complex vs simpler models
+In order to run the models, we had to use the Elastic Cloud product offered by Amazon Web Services. We used the Amazon Marketplace Image (AMI) called \textit{cs231n \_caffe \_torch7 \_keras \_lasagne \_v2}, developed by the CS231N course \cite{aws_tutorial}. We set it up on a g2.xlarge instance, which was limited to spot requests. 
+
+\subsection{Results}
+Table 1 shows the RMSE values for the models, as well as the number of samples deemed to be convincing by human judges. 
+%TODO fillthis table
+\begin{table}[!ht]
+\centering
+\caption{Each of 3 human judges saw x samples each, totaling x samples for each model}
+\begin{tabular}{lll}
+\hline
+Model               & Test RMSE & \# Convincing samples \\ \hline
+CNN with Regression & 24.468    &                       \\
+Pixel RNN w Sigmoid &           &                       \\
+Pixel RNN w Softmax &           &                       \\
+Pixel CNN           &           &                       \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Generated Samples}
+\textbf{CNN with Regression}
+
+\textbf{Pixel RNN w Sigmoid}
+
+\textbf{Pixel RNN w Softmax}
+
+\textbf{Pixel CNN}
 
 \section{Conclusion}
 % Conclusion: What have you learned? Suggest future ideas.
 
-
-
 %%%%% FUTURE IDEAS
 %% data improvements
-use domain knowledge by using same type of images (face, or categories of CIFAR)
+We received a helpful suggestion that using photos from the same domain would improve the performance of our models. By running the same models on a face dataset, we might have achieved better results, such as those achieved by van der Oord et al. with a variant of the Pixel CNN \cite{pixelCNN}. Another idea to consider is ordering the training examples for the RNNs such that we feed all the airplane pictures in a chunk, so that airplane specific features can be persisted across layers, rather than feeding a randomized assortment of images from different classes.\\
 
-%% high level modeling
-evaluation: 
-improve annotation collection, could possibly use annotations to label images for normalcy, and train on that
-%TODO describe another metric that someone else has used to describe how normal an image seems to humans
-
-one major limitation was not being able to tune efficiently over the full dataset. 
-perhaps this is why simpler models perform well; we have the ability to tune them
-combine speed of convolutions with recurrent structure to improve performance
-%TODO describe specifically the structure of the multi-scale RNN 
-
-major improvement would be to implement GANs and possibly DCGANs (efficiency?) given what we've learned about realistically training models using GPU instances, what challenges would we expect to face?
-
-
+Improving our evaluation system would be a worthwhile next step. If we improve the way we collect annotations from human judges such that we have a large volume of them, we could calculate statistics such as inter-annotator agreement and determine if certain images are harder to complete in a convincing way. We could also replace the RMSE as a method of technically comparing model performances, since it doesn't accurately capture our goal. Contextual loss, which measures the context similarity between the generated region of an image with the rest of the image, is one possible loss function. Perceptual loss is meant to encourage a network to create samples that are similar to those already seen in training. These losses are described in a paper that uses Generative Adversarial Networks (GANs) to solve image completion \cite{inpaint}. An implementation of contextual and perceptual loss for Pixel RNN and Pixel CNN would be a great addition to this project. \\
 
 %% low level modeling
-pixel rnn is too slow on its own, prediction for each pixel --> suggest ways to speed up
+The Pixel RNN, although it was made faster by the Diagonal BiLSTM layers, was still very slow. Training with 8 gpus on a g2.xlarge instance took days. The multi-scale version of Pixel RNN described by van der Oord et al. describes an implementation that takes advantage of the parallelized computations allowed by Pixel CNN, by combining unconditional as well as conditional generative networks \cite{pixelRNN}. \\
 
+Finally, a big aspect of the learning done in this project is the practical experience of standing up a model on GPU computing. One particularly important lesson we learned is that because training outcomes for these models can be sensitive to the number of training examples, iterations, or epochs, models that can be fully run in a short amount of time are more likely to be well-tuned. Being inexperienced with using the AWS cluster services, we underestimated the limitations of access to p2 or g2 instances. We weren't able to tune hyperparameters for the Pixel RNN models on the full datasets, since they took so long to train. Within the scope of our project and our results, we find that images we were able to generate with the complex Pixel RNN, which took days to train, weren't that much more convincing than the ones generated by the simpler CNN with Regression.
 
 \begin{thebibliography}{1}
 \bibitem{pixelRNN} Pixel Recurrent Neural Networks \url{https://arxiv.org/pdf/1601.06759v3}
 \bibitem{handwritingRNN} Generating Sequences with Recurrent Neural Networks \url{https://arxiv.org/pdf/1308.0850v5.pdf}
 \bibitem{pixelCNN} Conditional Image Generation with PixelCNN Decoders \url{https://arxiv.org/pdf/1606.05328v2.pdf}
 
-\bibitem{GAN} Generative Adversarial Nets \url{http://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf}
-\bibitem{DCGAN} Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks \url{https://arxiv.org/pdf/1511.06434v2}
+\bibitem{aws_tutorial} \url{http://cs231n.github.io/aws-tutorial/}
+
 \bibitem{inpaint} Semantic Image Inpainting with Perceptual and Contextual Losses \url{https://arxiv.org/pdf/1607.07539v2.pdf}
 \end{thebibliography}
 
