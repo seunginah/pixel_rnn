@@ -122,9 +122,7 @@ This is what our incomplete images look like after we remove the center pixels:
 \includegraphics[width=1.0\linewidth]{img_sample.png}
 
 %% how much in train and test set
-
-%% did we use smaller datasets to get the results or full size?
-
+We used 50,000 images for training and 10,000 images for testing. The testing images were not seen during training.
 
 \subsection{Setup}
 % AWS resources
@@ -151,12 +149,23 @@ Pixel CNN           &           &                       \\ \hline
 
 \subsection{Generated Samples}
 \textbf{CNN with Regression}
+Samples from training: the images in the top row are the original and the incomplete, respectively. \\
+\includegraphics[width=0.8\linewidth]{baseline_train_frog.jpg} 
+\includegraphics[width=0.8\linewidth]{baseline_train_truck.jpg} 
 
-\textbf{Pixel RNN w Sigmoid}
+Samples from testing: the left column is the original image, the right column is the inpainted image \\
+\includegraphics[width=0.8\linewidth]{baseline_test.jpg} 
 
 \textbf{Pixel RNN w Softmax}
+Samples from training: the images in the top row are the original and the incomplete, respectively. \\
+\includegraphics[width=0.8\linewidth]{baseline_train_frog.jpg} 
+\includegraphics[width=0.8\linewidth]{baseline_train_truck.jpg} 
 
-\textbf{Pixel CNN}
+Samples from testing: the left column is the original image, the right column is the inpainted image \\
+\includegraphics[width=0.8\linewidth]{baseline_test.jpg} 
+
+
+
 
 \section{Conclusion}
 % Conclusion: What have you learned? Suggest future ideas.
