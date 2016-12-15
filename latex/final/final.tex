@@ -153,7 +153,7 @@ Table 1 shows the RMSE values for the models, as well as the number of samples d
 Model               & Test RMSE & \# Convincing samples \\ \hline
 CNN with Regression & 24.468    &  4                     \\
 Pixel RNN w Sigmoid &   -       &  -                     \\
-Pixel RNN w Softmax &           &  10                     \\
+Pixel RNN w Softmax &   -       &  10                     \\
 Pixel CNN           &   -       &  -                     \\ \hline
 \end{tabular}
 \end{table}
@@ -164,6 +164,7 @@ Samples from training: the images in the top row are the original and the incomp
 \includegraphics[width=0.8\linewidth]{baseline_train_frog.jpg} 
 \includegraphics[width=0.8\linewidth]{baseline_train_truck.jpg} 
 
+\newpage
 Samples from testing: the left column is the original image, the right column is the inpainted image \\
 \includegraphics[width=0.8\linewidth]{baseline_test.jpg} 
 
@@ -171,9 +172,6 @@ Samples from testing: the left column is the original image, the right column is
 Samples from training: the images in the top row are the original and the incomplete, respectively. \\
 \includegraphics[width=0.8\linewidth]{rnn_rgb_train_frog.jpg} 
 \includegraphics[width=0.8\linewidth]{rnn_rgb_train_truck.jpg} 
-
-Samples from testing: the left column is the original image, the right column is the inpainted image \\
-\includegraphics[width=0.8\linewidth]{baseline_test.jpg} 
 
 \section{Conclusion}
 % Conclusion: What have you learned? Suggest future ideas.
