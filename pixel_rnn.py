@@ -301,7 +301,8 @@ def generate_and_save_samples(X, y, save_path, mode='test'):
                 samples[:, i, j, k] = next_sample[:, i, j, k]
 
     # Save
-    if X.shape[0] > 10:
+    num_test = X.shape[0]
+    if num_test > 10:
         # Pick 10 images randomly
         i = numpy.random.randint(0, num_test, 10)
         save_images(samples[i, :, :, :], save_path)
