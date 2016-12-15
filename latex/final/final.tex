@@ -186,15 +186,12 @@ We received a helpful suggestion that using photos from the same domain would im
 Improving our evaluation system would be a worthwhile next step. If we improve the way we collect annotations from human judges such that we have a large volume of them, we could calculate statistics such as inter-annotator agreement and determine if certain images are harder to complete in a convincing way. We could also replace the RMSE as a method of technically comparing model performances, since it doesn't accurately capture our goal. Contextual loss, which measures the context similarity between the generated region of an image with the rest of the image, is one possible loss function. Perceptual loss is meant to encourage a network to create samples that are similar to those already seen in training. These losses are described in a paper that uses Generative Adversarial Networks (GANs) to solve image completion \cite{inpaint}. An implementation of contextual and perceptual loss for Pixel RNN and Pixel CNN would be a great addition to this project. \\
 
 \begin{thebibliography}{1}
-\bibitem{pixelRNN} Pixel Recurrent Neural Networks \url{https://arxiv.org/pdf/1601.06759v3}
-\bibitem{handwritingRNN} Generating Sequences with Recurrent Neural Networks \url{https://arxiv.org/pdf/1308.0850v5.pdf}
-\bibitem{pixelCNN} Conditional Image Generation with PixelCNN Decoders \url{https://arxiv.org/pdf/1606.05328v2.pdf}
-
-
-\bibitem{igul_github} \url{https://github.com/igul222/pixel_rnn}
-\bibitem{aws_tutorial} \url{http://cs231n.github.io/aws-tutorial/}
-
-\bibitem{inpaint} Semantic Image Inpainting with Perceptual and Contextual Losses \url{https://arxiv.org/pdf/1607.07539v2.pdf}
+\bibitem{pixelRNN} A. van den Oord \textit{et al.}, "Pixel Recurrent Neural Networks," \textit{Proceedings of the 33rd International Conference on Machine Learning}, New York, NY, USA, 2016. \url{https://arxiv.org/pdf/1601.06759v3}
+\bibitem{handwritingRNN} A. Graves, "Generating Sequences with Recurrent Neural Networks," 2014. \url{https://arxiv.org/pdf/1308.0850v5.pdf}
+\bibitem{inpaint} R. Yeh \textit{et al.}, "Semantic Image Inpainting with Perceptual and Contextual Losses," 2016. \url{https://arxiv.org/pdf/1607.07539v2.pdf}
+\bibitem{pixelCNN} A. van den Oord \textit{et al.}, "Conditional Image Generation with PixelCNN Decoders," 2016 \url{https://arxiv.org/pdf/1606.05328v2.pdf}
+\bibitem{igul_github} Github for Pixel RNN and Pixel CNN code base: \url{https://github.com/igul222/pixel_rnn}
+\bibitem{aws_tutorial} Tutorial for setting up AWS GPU instances: \url{http://cs231n.github.io/aws-tutorial/}
 \end{thebibliography}
 
 
